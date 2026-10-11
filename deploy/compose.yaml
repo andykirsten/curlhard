@@ -1,0 +1,36 @@
+services:
+  api:
+    image: ghcr.io/${GHCR_OWNER:-owner}/curlhard-api:${CURLHARD_TAG:-latest}
+    env_file: .env
+    read_only: true
+    tmpfs: [/tmp]
+    volumes:
+      - data:/data
+      - /var/backups/curlhard:/backups
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    logging: &log
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  web:
+    image: ghcr.io/${GHCR_OWNER:-owner}/curlhard-web:${CURLHARD_TAG:-latest}
+    # TLS terminiert der Host-Nginx und leitet an 127.0.0.1:8080 weiter
+    ports: ["127.0.0.1:8080:80"]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+    logging: *log
+
+volumes:
+  data:

@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.db
+*.db-*
+.env
+deploy/.env
+frontend/test-results/
+frontend/playwright-report/
+screens/

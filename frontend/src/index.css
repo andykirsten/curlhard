@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 30% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 30% 10%;
+    --primary: 158 64% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 20% 94%;
+    --secondary-foreground: 222 30% 10%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 14% 40%;
+    --accent: 210 20% 92%;
+    --accent-foreground: 222 30% 10%;
+    --destructive: 0 72% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 20% 88%;
+    --input: 214 20% 82%;
+    --ring: 158 64% 36%;
+  }
+
+  .dark {
+    --background: 215 28% 7%;
+    --foreground: 210 20% 96%;
+    --card: 215 24% 11%;
+    --card-foreground: 210 20% 96%;
+    --primary: 158 60% 45%;
+    --primary-foreground: 215 28% 7%;
+    --secondary: 215 20% 17%;
+    --secondary-foreground: 210 20% 96%;
+    --muted: 215 20% 15%;
+    --muted-foreground: 215 14% 66%;
+    --accent: 215 20% 20%;
+    --accent-foreground: 210 20% 96%;
+    --destructive: 0 68% 56%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 18% 22%;
+    --input: 215 18% 26%;
+    --ring: 158 60% 45%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    overscroll-behavior-y: none;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px; /* verhindert Zoom beim Fokussieren in iOS Safari */
+  }
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}

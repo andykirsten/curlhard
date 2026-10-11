@@ -1,0 +1,54 @@
+from typing import Any
+
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+
+class ApiError(Exception):
+    def __init__(
+        self, status_code: int, code: str, message: str, details: dict[str, Any] | None = None
+    ):
+        self.status_code = status_code
+        self.code = code
+        self.message = message
+        self.details = details or {}
+
+
+def not_found(what: str = "Ressource") -> ApiError:
+    return ApiError(404, "not_found", f"{what} nicht gefunden")
+
+
+def _body(code: str, message: str, details: dict[str, Any] | None = None) -> dict:
+    return {"error": {"code": code, "message": message, "details": details or {}}}
+
+
+_CODES = {
+    400: "bad_request",
+    401: "unauthorized",
+    403: "forbidden",
+    404: "not_found",
+    405: "method_not_allowed",
+    409: "conflict",
+    429: "rate_limited",
+}
+
+
+def install_error_handlers(app: FastAPI) -> None:
+    @app.exception_handler(ApiError)
+    async def _api_error(_: Request, exc: ApiError):
+        return JSONResponse(_body(exc.code, exc.message, exc.details), status_code=exc.status_code)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def _http_error(_: Request, exc: StarletteHTTPException):
+        code = _CODES.get(exc.status_code, "error")
+        return JSONResponse(_body(code, str(exc.detail)), status_code=exc.status_code)
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_error(_: Request, exc: RequestValidationError):
+        errors = [{"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]} for e in exc.errors()]
+        return JSONResponse(
+            _body("validation_error", "Ungültige Eingabe", {"errors": errors}),
+            status_code=422,
+        )
