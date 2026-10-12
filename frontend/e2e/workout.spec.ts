@@ -55,19 +55,25 @@ test('Einladung → Registrierung → Plan → Workout loggen → Fortschritt', 
   await expect(page.getByRole('heading', { name: 'Push', exact: true })).toBeVisible()
   await expect(page.getByText('Bankdrücken')).toBeVisible()
   await page.getByRole('button', { name: 'Workout starten' }).click()
-  await expect(page.getByRole('heading', { name: 'Workout läuft' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Läuft' })).toBeVisible()
+  await expect(page.getByTestId('exercise-title')).toHaveText('Bankdrücken')
 
-  // --- Sätze loggen: Werte anpassen, abhaken, Pausen-Timer läuft ---
-  const bench = page.locator('div.rounded-lg', { hasText: 'Bankdrücken' }).first()
-  await bench.getByRole('button', { name: 'Gewicht (kg) erhöhen' }).click()
-  await bench.getByRole('button', { name: 'Gewicht (kg) erhöhen' }).click()
-  await bench.getByRole('button', { name: /Satz abhaken/ }).click()
-  await expect(bench.getByText('8 × 25 kg')).toBeVisible()
+  // --- Sätze loggen: Werte im Dock anpassen, abhaken, Pausen-Dock läuft ---
+  const doneRows = page.getByTestId('set-row')
+  await page.getByRole('button', { name: 'Gewicht (kg) erhöhen' }).click()
+  await page.getByRole('button', { name: 'Gewicht (kg) erhöhen' }).click()
+  await expect(page.getByTestId('active-row')).toContainText('8 × 25 kg')
+  await page.getByRole('button', { name: /Satz abhaken/ }).click()
+  await expect(doneRows).toHaveCount(1)
+  await expect(doneRows.first()).toContainText('8 × 25 kg')
   await expect(page.getByRole('timer')).toBeVisible()
   await expect(page.getByTestId('timer-clock')).toContainText(/\d:\d\d/)
 
-  await bench.getByRole('button', { name: /Satz abhaken/ }).click()
-  await expect(bench.getByText('8 × 25 kg')).toHaveCount(2)
+  // Pause beenden, damit das Eingabe-Dock wieder frei ist
+  await page.getByRole('button', { name: 'Weiter', exact: true }).click()
+  await page.getByRole('button', { name: /Satz abhaken/ }).click()
+  await expect(doneRows).toHaveCount(2)
+  await expect(doneRows.nth(1)).toContainText('8 × 25 kg')
 
   // --- Training beenden, im Verlauf auffindbar ---
   await page.getByRole('button', { name: 'Beenden' }).click()

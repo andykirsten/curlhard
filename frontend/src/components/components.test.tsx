@@ -106,6 +106,24 @@ describe('RestTimer', () => {
     vi.useRealTimers()
     useActiveSession.getState().startRest(60)
     render(<RestTimer />)
+    await userEvent.click(screen.getByRole('button', { name: 'Weiter' }))
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument()
+  })
+
+  it('extends the running pause by 30 seconds', async () => {
+    vi.useRealTimers()
+    useActiveSession.getState().startRest(60)
+    render(<RestTimer />)
+    await userEvent.click(screen.getByRole('button', { name: '+30 s' }))
+    expect(useActiveSession.getState().restTotalSec).toBe(90)
+    expect(screen.getByText('Pause · Ziel 1:30')).toBeInTheDocument()
+  })
+
+  it('closes the finished bar on tap', async () => {
+    vi.useRealTimers()
+    useActiveSession.getState().startRest(60, Date.now() - 120_000)
+    render(<RestTimer />)
+    expect(screen.getByText('Ab an die Bank!')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Timer schließen' }))
     expect(screen.queryByRole('timer')).not.toBeInTheDocument()
   })

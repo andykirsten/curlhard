@@ -16,21 +16,25 @@ interface SetEntryProps {
   weightStep: number
   loadType?: string
   disabled?: boolean
+  initialWarmup?: boolean
+  submitLabel?: string
   onSubmit: (values: SetValues) => void
 }
 
-/** Eingabe für den nächsten Satz: Werte des letzten Mals sind vorbelegt. */
+/** Eingabe zum Bearbeiten eines Satzes (Sheet); das Eingabe-Dock im Workout ist `InputDock`. */
 export function SetEntry({
   initialReps,
   initialWeight,
   weightStep,
   loadType = 'weight',
   disabled,
+  initialWarmup = false,
+  submitLabel = 'Satz abhaken',
   onSubmit,
 }: SetEntryProps) {
   const [reps, setReps] = useState(initialReps)
   const [weight, setWeight] = useState(initialWeight)
-  const [warmup, setWarmup] = useState(false)
+  const [warmup, setWarmup] = useState(initialWarmup)
   const isTime = loadType === 'time'
 
   return (
@@ -74,7 +78,7 @@ export function SetEntry({
             })
           }
         >
-          <Check className="h-5 w-5" /> Satz abhaken
+          <Check className="h-5 w-5" /> {submitLabel}
         </Button>
       </div>
     </div>

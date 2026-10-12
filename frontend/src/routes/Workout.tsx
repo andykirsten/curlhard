@@ -1,7 +1,8 @@
+import * as Dialog from '@radix-ui/react-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from '@tanstack/react-router'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { MoreHorizontal, Plus } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   getGetSessionDetailQueryKey,
@@ -29,145 +30,74 @@ import {
 import { ExercisePicker } from '@/components/ExercisePicker'
 import { EmptyState, PageHeader, Spinner } from '@/components/Layout'
 import { SetEntry, type SetValues } from '@/components/SetEntry'
-import { Badge, Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/input'
-import { apiWeekday, durationLabel, formatDateTime } from '@/lib/dates'
+import { Sheet } from '@/components/ui/sheet'
+import { InputDock } from '@/components/workout/InputDock'
+import { SetTable, type ActiveRow } from '@/components/workout/SetTable'
+import { VolumeBar } from '@/components/workout/VolumeBar'
+import { WorkoutHeader } from '@/components/workout/WorkoutHeader'
+import { apiWeekday } from '@/lib/dates'
 import { errorMessage } from '@/lib/query'
 import { formatWeight } from '@/lib/weight'
+import { e1rm, exerciseVolume } from '@/lib/workout'
 import { useActiveSession } from '@/stores/activeSession'
 import { useSettings } from '@/stores/settings'
 
 interface RecordMomentData {
   exercise: string
   records: number[]
+  setNumber: number
   weight: number
   reps: number
   e1: number
+  /** Zuwachs zum bisherigen Bestwert (e1RM), falls bekannt */
+  gain: number | null
 }
 
 /** Vollbild-Moment bei neuem Rekord (Design „Rekord-Moment“). */
 function RecordMoment({ data, onClose }: { data: RecordMomentData; onClose: () => void }) {
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Neuer Rekord"
-      className="safe-top safe-bottom fixed inset-0 z-50 flex flex-col justify-between bg-primary p-6 text-primary-foreground"
-    >
-      <p className="text-sm font-semibold uppercase tracking-widest opacity-80">{data.exercise}</p>
-      <div>
-        <h2 className="font-display text-7xl uppercase leading-none">
-          Neuer
-          <br />
-          Rekord
-        </h2>
-        <p className="mt-6 font-display text-5xl tabular-nums">
-          {formatWeight(data.weight)} kg × {data.reps}
-        </p>
-        <p className="mt-2 text-lg tabular-nums opacity-80">
-          e1RM {formatWeight(data.e1)} kg · {data.records.map((n) => `${n}RM`).join(' · ')}
-        </p>
-      </div>
-      <Button variant="secondary" size="lg" className="h-14 w-full" onClick={onClose}>
-        Weiter pumpen
-      </Button>
-    </div>
-  )
-}
-
-/** Geschätztes Maximum nach Epley (wie in backend/app/services/stats.py) */
-function e1rm(weight: number, reps: number): number {
-  return weight * (1 + reps / 30)
-}
-
-function SetRow({
-  set,
-  prev,
-  records,
-  weightStep,
-  loadType,
-  onUpdate,
-  onDelete,
-}: {
-  set: SetRead
-  prev: LastSet | undefined
-  records: number[]
-  weightStep: number
-  loadType: string
-  onUpdate: (values: SetValues) => void
-  onDelete: () => void
-}) {
-  const [editing, setEditing] = useState(false)
-  if (editing) {
-    return (
-      <li className="rounded-md border p-3">
-        <SetEntry
-          initialReps={set.reps}
-          initialWeight={set.weight_kg}
-          weightStep={weightStep}
-          loadType={loadType}
-          onSubmit={(v) => {
-            onUpdate(v)
-            setEditing(false)
+    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Content
+          aria-describedby={undefined}
+          className="safe-top safe-bottom fixed inset-0 z-50 flex flex-col justify-between bg-primary p-6 text-primary-foreground"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(135deg, rgba(0,0,0,0.08) 0 24px, transparent 24px 48px)',
           }}
-        />
-      </li>
-    )
-  }
-  const delta =
-    loadType === 'time' || !prev || set.is_warmup
-      ? null
-      : e1rm(set.weight_kg, set.reps) - e1rm(prev.weight_kg, prev.reps)
-  return (
-    <li className="grid grid-cols-[2rem_1fr_1fr_3.5rem_auto] items-center gap-2 py-2">
-      <span className="text-center font-display text-lg text-muted-foreground">
-        {set.is_warmup ? 'W' : set.set_number}
-      </span>
-      <span className="text-sm tabular-nums text-muted-foreground">
-        {prev
-          ? loadType === 'time'
-            ? `${prev.reps} s`
-            : `${prev.reps} × ${formatWeight(prev.weight_kg)} kg`
-          : '–'}
-      </span>
-      <span className="font-semibold tabular-nums">
-        {loadType === 'time' ? `${set.reps} s` : `${set.reps} × ${formatWeight(set.weight_kg)} kg`}
-      </span>
-      <span
-        className={`text-right text-sm font-semibold tabular-nums ${
-          delta != null && delta >= 0 ? 'text-primary' : 'text-muted-foreground'
-        }`}
-        aria-label="Veränderung ggü. letztem Mal"
-      >
-        {delta == null
-          ? '–'
-          : `${delta >= 0 ? '+' : '−'}${formatWeight(Math.abs(Math.round(delta * 10) / 10))}`}
-      </span>
-      <div className="flex items-center justify-end gap-1">
-        {records.length > 0 && (
-          <Badge variant="record" aria-label="Neuer Rekord">
-            Rekord {records.map((n) => `${n}RM`).join(' · ')}
-          </Badge>
-        )}
-        <button
-          type="button"
-          aria-label="Satz bearbeiten"
-          className="rounded-md p-2 hover:bg-accent"
-          onClick={() => setEditing(true)}
         >
-          <Pencil className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          aria-label="Satz löschen"
-          className="rounded-md p-2 hover:bg-accent"
-          onClick={onDelete}
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
-      </div>
-    </li>
+          <Dialog.Title className="text-sm font-semibold uppercase tracking-widest opacity-80">
+            Neuer Rekord · {data.exercise}
+          </Dialog.Title>
+          <div>
+            <p aria-hidden className="font-display text-7xl uppercase leading-none">
+              Neuer
+              <br />
+              Rekord
+            </p>
+            <p className="mt-6 text-sm font-bold uppercase tracking-[0.16em] opacity-80">
+              Satz {data.setNumber}
+            </p>
+            <p className="mt-1 font-display text-5xl tabular-nums">
+              {formatWeight(data.weight)} kg × {data.reps}
+            </p>
+            <p className="mt-2 text-lg tabular-nums opacity-90">
+              e1RM {formatWeight(Math.round(data.e1 * 10) / 10)} kg
+              {data.gain != null && data.gain > 0 && (
+                <> · +{formatWeight(Math.round(data.gain * 10) / 10)} kg zum Bestwert</>
+              )}
+              {' · '}
+              {data.records.map((n) => `${n}RM`).join(' · ')}
+            </p>
+          </div>
+          <Button variant="secondary" size="lg" className="h-14 w-full uppercase" onClick={onClose}>
+            Weiter pumpen
+          </Button>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }
 
@@ -229,26 +159,34 @@ function SessionNote({ session }: { session: SessionRead }) {
   )
 }
 
-function ExerciseCard({
+function ExerciseFocus({
   se,
+  index,
+  total,
+  nextName,
   exercise,
   restSec,
-  todayLast,
   prevSets,
   recordsBySet,
   onRecords,
   onRecordMoment,
+  onGo,
+  onAddExercise,
   session,
 }: {
   se: SessionExerciseRead
+  index: number
+  total: number
+  nextName: string | null
   exercise: ExerciseRead | undefined
   restSec: number
-  todayLast: { reps: number; weight_kg: number } | null
-  /** Arbeitssätze des letzten Trainings am selben Tag, Index = Satznummer - 1 */
+  /** Arbeitssätze des letzten Trainings am selben Tag, Index = Arbeitssatz-Nr. - 1 */
   prevSets: LastSet[]
   recordsBySet: Record<number, number[]>
   onRecords: (setId: number, records: number[]) => void
   onRecordMoment: (moment: RecordMomentData) => void
+  onGo: (delta: 1 | -1) => void
+  onAddExercise: () => void
   session: SessionRead
 }) {
   const queryClient = useQueryClient()
@@ -260,24 +198,43 @@ function ExerciseCard({
   const deleteSet = useDeleteSet()
   const updateSe = useUpdateSessionExercise()
   const deleteSe = useDeleteSessionExercise()
-  const summary = useExerciseSummary(se.exercise_id, {
-    query: { enabled: !todayLast },
-  })
+  const summary = useExerciseSummary(se.exercise_id)
+  const note = useGetNote(se.exercise_id)
   const loadType = exercise?.load_type ?? 'weight'
+  const finished = session.finished_at != null
+  const name = exercise?.name ?? `Übung ${se.exercise_id}`
 
-  const lastSet = se.sets.filter((s) => !s.is_warmup).at(-1)
+  const [notesOpen, setNotesOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [editing, setEditing] = useState<SetRead | null>(null)
+
+  const working = se.sets.filter((s) => !s.is_warmup)
+  const lastSet = working.at(-1)
   const fallback = summary.data?.last_session?.best_set
-  const prefill = lastSet
-    ? { reps: lastSet.reps, weight: lastSet.weight_kg }
-    : todayLast
-      ? { reps: todayLast.reps, weight: todayLast.weight_kg }
-      : { reps: fallback?.reps ?? 8, weight: fallback?.weight_kg ?? 20 }
+  const source = prevSets[working.length] ?? lastSet
+  const prefill = source
+    ? { reps: source.reps, weight: source.weight_kg }
+    : { reps: fallback?.reps ?? 8, weight: fallback?.weight_kg ?? 20 }
+
+  // Dock-Werte: werden nach jedem Satz (bzw. wenn Vergleichsdaten eintreffen) neu vorbelegt
+  const seedKey = `${se.id}:${se.sets.length}:${prevSets.length}:${fallback ? 1 : 0}`
+  const [seed, setSeed] = useState(seedKey)
+  const [weight, setWeight] = useState(prefill.weight)
+  const [reps, setReps] = useState(prefill.reps)
+  const [warmup, setWarmup] = useState(false)
+  if (seed !== seedKey) {
+    setSeed(seedKey)
+    setWeight(prefill.weight)
+    setReps(prefill.reps)
+  }
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: key })
   const showError = (e: unknown) => toast.error(errorMessage(e))
 
   const log = async (v: SetValues) => {
     const tempId = -Date.now()
+    const bestBefore = summary.data?.e1rm ?? null
+    const setNumber = working.length + 1
     // Laufende Refetches abbrechen, damit ein veralteter Stand den Optimistic Update nicht überschreibt
     await queryClient.cancelQueries({ queryKey: key })
     // Optimistic Update: Satz erscheint sofort, Timer startet ohne auf den Server zu warten
@@ -310,18 +267,22 @@ function ExerciseCard({
         : old,
     )
     if (!v.is_warmup && !session.finished_at) startRest(restSec)
+    setWarmup(false)
     addSet.mutate(
       { seId: se.id, data: v },
       {
         onSuccess: (saved) => {
           if (saved.records.length > 0) {
+            const e1 = e1rm(v.weight_kg, v.reps)
             onRecords(saved.id, saved.records)
             onRecordMoment({
-              exercise: exercise?.name ?? 'Übung',
+              exercise: name,
               records: saved.records,
+              setNumber,
               weight: v.weight_kg,
               reps: v.reps,
-              e1: v.weight_kg * (1 + v.reps / 30),
+              e1,
+              gain: bestBefore != null ? e1 - bestBefore : null,
             })
             toast.success(`Neuer Rekord: ${saved.records.map((n) => `${n}RM`).join(', ')}`)
           }
@@ -333,9 +294,7 @@ function ExerciseCard({
               ? {
                   ...old,
                   exercises: old.exercises.map((x) =>
-                    x.id === se.id
-                      ? { ...x, sets: x.sets.filter((s) => s.id !== tempId) }
-                      : x,
+                    x.id === se.id ? { ...x, sets: x.sets.filter((s) => s.id !== tempId) } : x,
                   ),
                 }
               : old,
@@ -349,85 +308,206 @@ function ExerciseCard({
     )
   }
 
+  const active: ActiveRow | null = finished
+    ? null
+    : {
+        number: working.length + 1,
+        reps,
+        weight_kg: loadType === 'time' ? 0 : weight,
+        is_warmup: warmup,
+        prev: warmup ? undefined : prevSets[working.length],
+      }
+
+  // Wischen wechselt die Übung (horizontal, > 60 px)
+  const swipe = useRef<{ x: number; y: number } | null>(null)
+
+  const volumeToday = exerciseVolume(se.sets, loadType)
+  const volumeLast = exerciseVolume(prevSets, loadType)
+  const memo = note.data?.note?.trim()
+
   return (
-    <Card>
-      <CardContent className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <Link
-            to="/exercises/$exerciseId"
-            params={{ exerciseId: String(se.exercise_id) }}
-            className="text-lg font-semibold"
-          >
-            {exercise?.name ?? `Übung ${se.exercise_id}`}
-          </Link>
+    <div
+      className="touch-pan-y"
+      onPointerDown={(e) => {
+        swipe.current = { x: e.clientX, y: e.clientY }
+      }}
+      onPointerUp={(e) => {
+        const start = swipe.current
+        swipe.current = null
+        if (!start) return
+        const dx = e.clientX - start.x
+        const dy = e.clientY - start.y
+        if (Math.abs(dx) > 60 && Math.abs(dy) < 40) onGo(dx < 0 ? 1 : -1)
+      }}
+    >
+      <VolumeBar
+        exercise={name}
+        today={volumeToday}
+        last={volumeLast}
+        unit={loadType === 'time' ? 's' : 'kg'}
+      />
+      <section aria-label="Übung" className="border-t px-5 pt-3">
+        <div className="flex items-center justify-between gap-3 text-[13px] font-semibold text-muted-foreground">
+          {index > 0 ? (
+            <button type="button" aria-label="Vorherige Übung" onClick={() => onGo(-1)}>
+              ‹ Übung {index + 1} / {total}
+            </button>
+          ) : (
+            <span>
+              Übung {index + 1} / {total}
+            </span>
+          )}
+          {nextName ? (
+            <button type="button" className="truncate text-right" onClick={() => onGo(1)}>
+              Danach: {nextName}
+            </button>
+          ) : (
+            !finished && (
+              <button type="button" onClick={onAddExercise}>
+                + Übung hinzufügen
+              </button>
+            )
+          )}
+        </div>
+        <div className="mt-1 flex items-start justify-between gap-2">
+          <h2 className="font-display text-[44px] uppercase leading-none" data-testid="exercise-title">
+            {name}
+          </h2>
           <button
             type="button"
+            aria-label="Übungsmenü"
+            className="-mr-2 mt-1 rounded-md p-2 hover:bg-accent"
+            onClick={() => setMenuOpen(true)}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+        </div>
+        <button
+          type="button"
+          aria-label="Memos bearbeiten"
+          className="mt-1 mb-3 block w-full truncate text-left text-sm font-medium italic text-muted-foreground"
+          onClick={() => setNotesOpen(true)}
+        >
+          {memo ? `Memo: ${memo}` : se.note ? `Session-Memo: ${se.note}` : 'Memo hinzufügen'}
+        </button>
+        <SetTable
+          sets={se.sets}
+          prevSets={prevSets}
+          active={active}
+          loadType={loadType}
+          recordsBySet={recordsBySet}
+          compact={!finished}
+          onSelect={setEditing}
+        />
+      </section>
+
+      {!finished && (
+        <InputDock
+          weight={weight}
+          reps={reps}
+          warmup={warmup}
+          weightStep={weightStep}
+          loadType={loadType}
+          onWeight={setWeight}
+          onReps={setReps}
+          onWarmup={setWarmup}
+          onSubmit={() =>
+            void log({
+              reps,
+              weight_kg: loadType === 'time' ? 0 : weight,
+              is_warmup: warmup,
+            })
+          }
+        />
+      )}
+
+      <Sheet open={notesOpen} onOpenChange={setNotesOpen} title={`Memos · ${name}`}>
+        <div className="space-y-3 pb-2">
+          <PermanentNote exerciseId={se.exercise_id} />
+          <Textarea
+            aria-label="Session-Memo"
+            placeholder="Memo für diese Session"
+            rows={2}
+            defaultValue={se.note}
+            onBlur={(e) => {
+              if (e.target.value !== se.note) {
+                updateSe.mutate(
+                  { seId: se.id, data: { note: e.target.value } },
+                  { onSuccess: refresh, onError: showError },
+                )
+              }
+            }}
+          />
+          <SessionNote session={session} />
+        </div>
+      </Sheet>
+
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen} title={name}>
+        <div className="flex flex-col gap-2 pb-2">
+          <Button variant="outline" asChild>
+            <Link to="/exercises/$exerciseId" params={{ exerciseId: String(se.exercise_id) }}>
+              Übungsdetails
+            </Link>
+          </Button>
+          {!finished && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMenuOpen(false)
+                onAddExercise()
+              }}
+            >
+              <Plus className="h-4 w-4" /> Übung hinzufügen
+            </Button>
+          )}
+          <Button
+            variant="destructive"
             aria-label="Übung entfernen"
-            className="rounded-md p-2 hover:bg-accent"
             onClick={() => {
               if (confirm('Übung mit allen Sätzen aus dieser Session entfernen?')) {
+                setMenuOpen(false)
                 deleteSe.mutate({ seId: se.id }, { onSuccess: refresh, onError: showError })
               }
             }}
           >
-            <Trash2 className="h-4 w-4" />
-          </button>
+            Übung entfernen
+          </Button>
         </div>
-        <PermanentNote exerciseId={se.exercise_id} />
-        {se.sets.length > 0 && (
-          <div className="grid grid-cols-[2rem_1fr_1fr_3.5rem_auto] gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            <span className="text-center">Satz</span>
-            <span>Letztes Mal</span>
-            <span>Heute</span>
-            <span className="text-right">Δ e1RM</span>
-            <span />
-          </div>
-        )}
-        <ul className="divide-y">
-          {se.sets.map((s) => (
-            <SetRow
-              key={s.id}
-              set={s}
-              prev={s.is_warmup ? undefined : prevSets[s.set_number - 1]}
-              records={recordsBySet[s.id] ?? []}
+      </Sheet>
+
+      <Sheet open={editing != null} onOpenChange={(o) => !o && setEditing(null)} title="Satz bearbeiten">
+        {editing && (
+          <div className="space-y-4 pb-2">
+            <SetEntry
+              initialReps={editing.reps}
+              initialWeight={editing.weight_kg}
+              initialWarmup={editing.is_warmup}
               weightStep={weightStep}
               loadType={loadType}
-              onUpdate={(v) =>
+              submitLabel="Speichern"
+              onSubmit={(v) => {
                 updateSet.mutate(
-                  { setId: s.id, data: v },
+                  { setId: editing.id, data: v },
                   { onSuccess: refresh, onError: showError },
                 )
-              }
-              onDelete={() =>
-                deleteSet.mutate({ setId: s.id }, { onSuccess: refresh, onError: showError })
-              }
+                setEditing(null)
+              }}
             />
-          ))}
-        </ul>
-        <SetEntry
-          key={`${se.id}-${se.sets.length}`}
-          initialReps={prefill.reps}
-          initialWeight={prefill.weight}
-          weightStep={weightStep}
-          loadType={loadType}
-          onSubmit={log}
-        />
-        <Textarea
-          aria-label="Session-Memo"
-          placeholder="Memo für diese Session"
-          rows={1}
-          defaultValue={se.note}
-          onBlur={(e) => {
-            if (e.target.value !== se.note) {
-              updateSe.mutate(
-                { seId: se.id, data: { note: e.target.value } },
-                { onSuccess: refresh, onError: showError },
-              )
-            }
-          }}
-        />
-      </CardContent>
-    </Card>
+            <Button
+              variant="destructive"
+              className="w-full"
+              aria-label="Satz löschen"
+              onClick={() => {
+                deleteSet.mutate({ setId: editing.id }, { onSuccess: refresh, onError: showError })
+                setEditing(null)
+              }}
+            >
+              Satz löschen
+            </Button>
+          </div>
+        )}
+      </Sheet>
+    </div>
   )
 }
 
@@ -445,6 +525,7 @@ export function WorkoutPage() {
   const endSession = useActiveSession((s) => s.endSession)
   const defaultRest = useSettings((s) => s.defaultRestSec)
   const [picker, setPicker] = useState(false)
+  const [focusIndex, setFocusIndex] = useState(0)
   const [recordsBySet, setRecordsBySet] = useState<Record<number, number[]>>({})
   const [moment, setMoment] = useState<RecordMomentData | null>(null)
 
@@ -468,92 +549,93 @@ export function WorkoutPage() {
       queryKey: getGetSessionDetailQueryKey(id),
     })
 
+  const count = session.exercises.length
+  const index = Math.min(focusIndex, Math.max(0, count - 1))
+  const se = session.exercises[index]
+  const plan = se ? planned.get(se.exercise_id) : undefined
+  const next = session.exercises[index + 1]
+  const go = (delta: 1 | -1) =>
+    setFocusIndex(Math.min(Math.max(0, index + delta), Math.max(0, count - 1)))
+
+  const onFinish = () =>
+    finish.mutate(
+      { sessionId: id },
+      {
+        onSuccess: async () => {
+          endSession()
+          useActiveSession.getState().clearRest()
+          await queryClient.invalidateQueries()
+          toast.success('Training beendet')
+          void navigate({ to: '/' })
+        },
+        onError: (e) => toast.error(errorMessage(e)),
+      },
+    )
+
   return (
     <>
       {moment && <RecordMoment data={moment} onClose={() => setMoment(null)} />}
-      <PageHeader
-        title={finished ? 'Session' : 'Workout läuft'}
-        back={finished ? '/history' : '/'}
-        actions={
-          !finished && (
-            <Button
-              size="sm"
-              disabled={finish.isPending}
-              onClick={() =>
-                finish.mutate(
-                  { sessionId: id },
-                  {
-                    onSuccess: async () => {
-                      endSession()
-                      useActiveSession.getState().clearRest()
-                      await queryClient.invalidateQueries()
-                      toast.success('Training beendet')
-                      void navigate({ to: '/' })
-                    },
-                    onError: (e) => toast.error(errorMessage(e)),
-                  },
-                )
-              }
-            >
-              Beenden
-            </Button>
-          )
-        }
-      />
-      <div className="space-y-4 p-4">
-        <p className="text-sm text-muted-foreground">
-          {session.cycle_name && (
-            <span className="font-semibold text-foreground">{session.cycle_name} · </span>
-          )}
-          {formatDateTime(session.started_at)} ·{' '}
-          {durationLabel(session.started_at, session.finished_at)}
-        </p>
-        {session.exercises.length === 0 && (
-          <EmptyState title="Noch keine Übungen" hint="Füge deine erste Übung hinzu." />
+      {finished ? (
+        <PageHeader title="Session" back="/history" />
+      ) : (
+        <WorkoutHeader startedAt={session.started_at} pending={finish.isPending} onFinish={onFinish} />
+      )}
+      <div className={finished ? 'pb-6' : 'pb-80'}>
+        {session.cycle_name && (
+          <p className="px-5 pb-2 text-sm font-semibold text-muted-foreground">
+            {session.cycle_name}
+          </p>
         )}
-        {session.exercises.map((se) => {
-          const plan = planned.get(se.exercise_id)
-          const last = plan?.last_sets.filter((s) => !s.is_warmup).at(-1) ?? null
-          return (
-            <ExerciseCard
-              key={se.id}
-              se={se}
-              exercise={byId.get(se.exercise_id)}
-              restSec={plan?.target_rest_sec ?? defaultRest}
-              todayLast={last}
-              prevSets={plan?.last_sets.filter((x) => !x.is_warmup) ?? []}
-              recordsBySet={recordsBySet}
-              onRecords={(setId, recs) => setRecordsBySet((m) => ({ ...m, [setId]: recs }))}
-              onRecordMoment={setMoment}
-              session={session}
-            />
-          )
-        })}
-        <Button variant="outline" className="w-full" onClick={() => setPicker(true)}>
-          <Plus className="h-4 w-4" /> Übung hinzufügen
-        </Button>
-        <SessionNote session={session} />
+        {count === 0 && (
+          <div className="space-y-3 px-5">
+            <EmptyState title="Noch keine Übungen" hint="Füge deine erste Übung hinzu." />
+            <Button variant="outline" className="w-full" onClick={() => setPicker(true)}>
+              <Plus className="h-4 w-4" /> Übung hinzufügen
+            </Button>
+          </div>
+        )}
+        {se && (
+          <ExerciseFocus
+            key={se.id}
+            se={se}
+            index={index}
+            total={count}
+            nextName={next ? (byId.get(next.exercise_id)?.name ?? `Übung ${next.exercise_id}`) : null}
+            exercise={byId.get(se.exercise_id)}
+            restSec={plan?.target_rest_sec ?? defaultRest}
+            prevSets={plan?.last_sets.filter((x) => !x.is_warmup) ?? []}
+            recordsBySet={recordsBySet}
+            onRecords={(setId, recs) => setRecordsBySet((m) => ({ ...m, [setId]: recs }))}
+            onRecordMoment={setMoment}
+            onGo={go}
+            onAddExercise={() => setPicker(true)}
+            session={session}
+          />
+        )}
         {finished && (
-          <Button
-            variant="destructive"
-            className="w-full"
-            onClick={() => {
-              if (confirm('Session endgültig löschen?')) {
-                remove.mutate(
-                  { sessionId: id },
-                  {
-                    onSuccess: async () => {
-                      await queryClient.invalidateQueries()
-                      void navigate({ to: '/history' })
+          <div className="mt-6 space-y-3 px-5">
+            <SessionNote session={session} />
+            <Button
+              variant="destructive"
+              className="w-full"
+              onClick={() => {
+                if (confirm('Session endgültig löschen?')) {
+                  remove.mutate(
+                    { sessionId: id },
+                    {
+                      onSuccess: async () => {
+                        await queryClient.invalidateQueries()
+                        void navigate({ to: '/history' })
+                      },
+                      onError: (e) => toast.error(errorMessage(e)),
                     },
-                    onError: (e) => toast.error(errorMessage(e)),
-                  },
-                )
-              }
-            }}
-          >
-            Session löschen
-          </Button>
+                  )
+                }
+              }}
+            >
+              Session löschen
+            </Button>
+          </div>
         )}
       </div>
       <ExercisePicker
@@ -563,7 +645,11 @@ export function WorkoutPage() {
           addExercise.mutate(
             { sessionId: id, data: { exercise_id: ex.id } },
             {
-              onSuccess: refresh,
+              onSuccess: async () => {
+                await refresh()
+                // Neue Übung ans Ende der Session springen lassen
+                setFocusIndex(count)
+              },
               onError: (e) => toast.error(errorMessage(e)),
             },
           )
