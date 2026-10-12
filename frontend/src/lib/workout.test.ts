@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  compareLabel,
   deltaLabel,
   e1rm,
   exerciseProgress,
@@ -42,6 +43,24 @@ describe('exerciseProgress', () => {
   it('is never done without a target', () => {
     expect(exerciseProgress([set(8, 60)])).toEqual({ done: 1, target: null, status: 'started' })
     expect(exerciseProgress([set(10, 20, true)], 0).status).toBe('open')
+  })
+})
+
+describe('compareLabel', () => {
+  const at = '2026-10-05T08:00:00Z'
+  it('names the plan day or the fallback source', () => {
+    expect(compareLabel({ source_started_at: at, same_plan_day: true }, 'Tag 2')).toBe(
+      'Letztes Mal: Tag 2 · Mo, 05.10.',
+    )
+    expect(compareLabel({ source_started_at: at, same_plan_day: false }, 'Tag 2')).toBe(
+      'Letztes Mal: anderes Training · Mo, 05.10.',
+    )
+  })
+  it('handles missing history', () => {
+    expect(compareLabel(undefined, null)).toBe('Noch kein Vergleich')
+    expect(compareLabel({ source_started_at: null, same_plan_day: false }, null)).toBe(
+      'Noch kein Vergleich',
+    )
   })
 })
 

@@ -378,6 +378,19 @@ export interface PlanUpdate {
   is_public?: boolean | null;
 }
 
+/**
+ * Vergleichswerte einer Übung der Session aus dem vorherigen Training.
+ */
+export interface PreviousExercise {
+  exercise_id: number;
+  target_sets: number | null;
+  target_rest_sec: number | null;
+  source_session_id: number | null;
+  source_started_at: string | null;
+  same_plan_day: boolean;
+  sets: LastSet[];
+}
+
 export interface PublicPlanDaySummary {
   name: string;
   weekday: number | null;
@@ -481,6 +494,11 @@ export interface SessionMetrics {
   e1rm: number | null;
   nrm: SessionMetricsNrm;
   duration_sec: number | null;
+}
+
+export interface SessionPrevious {
+  plan_day_name: string | null;
+  exercises: PreviousExercise[];
 }
 
 export interface SessionRead {
@@ -5622,6 +5640,108 @@ export const useDeleteSession = <TError = ErrorType<HTTPValidationError>,
       > => {
       return useMutation(getDeleteSessionMutationOptions(options), queryClient);
     }
+
+export const getGetSessionPreviousUrl = (sessionId: number,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/previous`
+}
+
+/**
+ * Vergleichswerte je Übung: letztes Training desselben Plantags, sonst letzte Session.
+ * @summary Get Session Previous
+ */
+export const getSessionPrevious = async (sessionId: number, options?: Parameters<typeof customFetch>[1]): Promise<SessionPrevious> => {
+
+  return customFetch<SessionPrevious>(getGetSessionPreviousUrl(sessionId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSessionPreviousQueryKey = (sessionId: number,) => {
+    return [
+    `/api/v1/sessions/${sessionId}/previous`
+    ] as const;
+    }
+
+
+export const getGetSessionPreviousQueryOptions = <TData = Awaited<ReturnType<typeof getSessionPrevious>>, TError = ErrorType<HTTPValidationError>>(sessionId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionPrevious>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSessionPreviousQueryKey(sessionId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSessionPrevious>>> = ({ signal }) => getSessionPrevious(sessionId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSessionPrevious>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSessionPreviousQueryResult = NonNullable<Awaited<ReturnType<typeof getSessionPrevious>>>
+export type GetSessionPreviousQueryError = ErrorType<HTTPValidationError>
+
+
+export function useGetSessionPrevious<TData = Awaited<ReturnType<typeof getSessionPrevious>>, TError = ErrorType<HTTPValidationError>>(
+ sessionId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionPrevious>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSessionPrevious>>,
+          TError,
+          Awaited<ReturnType<typeof getSessionPrevious>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSessionPrevious<TData = Awaited<ReturnType<typeof getSessionPrevious>>, TError = ErrorType<HTTPValidationError>>(
+ sessionId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionPrevious>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSessionPrevious>>,
+          TError,
+          Awaited<ReturnType<typeof getSessionPrevious>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSessionPrevious<TData = Awaited<ReturnType<typeof getSessionPrevious>>, TError = ErrorType<HTTPValidationError>>(
+ sessionId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionPrevious>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Session Previous
+ */
+
+export function useGetSessionPrevious<TData = Awaited<ReturnType<typeof getSessionPrevious>>, TError = ErrorType<HTTPValidationError>>(
+ sessionId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionPrevious>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetSessionPreviousQueryOptions(sessionId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getFinishSessionUrl = (sessionId: number,) => {
 

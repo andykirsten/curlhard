@@ -54,6 +54,7 @@ def _cases(w):
         ("patch", f"/plan-exercises/{w['pe']}", {"note": "gehackt"}),
         ("delete", f"/plan-exercises/{w['pe']}", None),
         ("get", f"/sessions/{w['session']}", None),
+        ("get", f"/sessions/{w['session']}/previous", None),
         ("patch", f"/sessions/{w['session']}", {"note": "gehackt"}),
         ("delete", f"/sessions/{w['session']}", None),
         ("post", f"/sessions/{w['session']}/finish", None),

@@ -195,6 +195,75 @@ def test_delete_session_removes_sets(alice, catalog):
     assert alice.patch(f"{API}/sets/{st['id']}", json={"reps": 1}).status_code == 404
 
 
+def _log(c, session, exercise_id, *sets):
+    se = next(e for e in session["exercises"] if e["exercise_id"] == exercise_id)
+    for reps, weight in sets:
+        c.post(f"{API}/session-exercises/{se['id']}/sets", json={"reps": reps, "weight_kg": weight})
+
+
+def test_previous_prefers_same_plan_day(alice, catalog):
+    bench, squat = catalog["bench"]["id"], catalog["squat"]["id"]
+    plan, day_a = _active_plan(alice, catalog, weekday=0)
+    day_b = alice.post(f"{API}/plans/{plan['id']}/days", json={"name": "Tag B"}).json()
+    alice.post(f"{API}/plan-days/{day_b['id']}/exercises", json={"exercise_id": bench})
+
+    a1 = alice.post(f"{API}/sessions", json={"plan_day_id": day_a["id"], "started_at": iso(7)})
+    _log(alice, a1.json(), bench, (8, 80), (7, 80))
+    b1 = alice.post(f"{API}/sessions", json={"plan_day_id": day_b["id"], "started_at": iso(3)})
+    _log(alice, b1.json(), bench, (5, 100))
+    a2 = alice.post(f"{API}/sessions", json={"plan_day_id": day_a["id"]}).json()
+    # Eigene Sätze der laufenden Session dürfen den Vergleich nicht überschreiben
+    _log(alice, a2, bench, (9, 82.5))
+
+    body = alice.get(f"{API}/sessions/{a2['id']}/previous").json()
+    assert body["plan_day_name"] == "Push"
+    by_ex = {e["exercise_id"]: e for e in body["exercises"]}
+    assert [(s["reps"], s["weight_kg"]) for s in by_ex[bench]["sets"]] == [(8, 80), (7, 80)]
+    assert by_ex[bench]["same_plan_day"] is True
+    assert by_ex[bench]["source_session_id"] == a1.json()["id"]
+    assert (by_ex[bench]["target_sets"], by_ex[bench]["target_rest_sec"]) == (3, 120)
+    assert by_ex[squat]["sets"] == [] and by_ex[squat]["source_session_id"] is None
+
+
+def test_previous_falls_back_to_any_session(alice, catalog):
+    bench, squat = catalog["bench"]["id"], catalog["squat"]["id"]
+    _, day = _active_plan(alice, catalog)
+    free = alice.post(f"{API}/sessions", json={"started_at": iso(2)}).json()
+    se = alice.post(f"{API}/sessions/{free['id']}/exercises", json={"exercise_id": squat}).json()
+    alice.post(f"{API}/session-exercises/{se['id']}/sets", json={"reps": 5, "weight_kg": 120})
+
+    s = alice.post(f"{API}/sessions", json={"plan_day_id": day["id"]}).json()
+    by_ex = {
+        e["exercise_id"]: e
+        for e in alice.get(f"{API}/sessions/{s['id']}/previous").json()["exercises"]
+    }
+    assert by_ex[squat]["same_plan_day"] is False
+    assert [(x["reps"], x["weight_kg"]) for x in by_ex[squat]["sets"]] == [(5, 120)]
+    assert by_ex[bench]["sets"] == []
+
+    # Freie Session ohne Plantag: nur Fallback, keine Ziele
+    later = alice.post(f"{API}/sessions", json={}).json()
+    alice.post(f"{API}/sessions/{later['id']}/exercises", json={"exercise_id": squat})
+    body = alice.get(f"{API}/sessions/{later['id']}/previous").json()
+    assert body["plan_day_name"] is None
+    [only] = body["exercises"]
+    assert only["target_sets"] is None and only["same_plan_day"] is False
+    assert only["source_session_id"] == free["id"]
+
+
+def test_previous_of_finished_session_looks_further_back(alice, catalog):
+    bench = catalog["bench"]["id"]
+    _, day = _active_plan(alice, catalog)
+    old = alice.post(f"{API}/sessions", json={"plan_day_id": day["id"], "started_at": iso(14)})
+    _log(alice, old.json(), bench, (6, 70))
+    mid = alice.post(f"{API}/sessions", json={"plan_day_id": day["id"], "started_at": iso(7)})
+    _log(alice, mid.json(), bench, (7, 72.5))
+    alice.post(f"{API}/sessions", json={"plan_day_id": day["id"]})
+    body = alice.get(f"{API}/sessions/{mid.json()['id']}/previous").json()
+    bench_prev = next(e for e in body["exercises"] if e["exercise_id"] == bench)
+    assert bench_prev["source_session_id"] == old.json()["id"]
+
+
 def test_cannot_start_session_from_foreign_day(alice, bob, catalog):
     plan, day = _active_plan(bob, catalog)
     assert alice.post(f"{API}/sessions", json={"plan_day_id": day["id"]}).status_code == 404
