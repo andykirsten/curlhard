@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
 
+from app.models import User
+
 
 class RegisterCreate(BaseModel):
     email: EmailStr
@@ -25,12 +27,31 @@ class UserUpdate(BaseModel):
     body_weight_kg: float | None = Field(default=None, gt=0, le=700)
 
 
+def avatar_url_for(user_id: int, avatar_updated_at: datetime | None) -> str | None:
+    """Cache-Busting über den Zeitstempel des Uploads; None ohne Avatar."""
+    if avatar_updated_at is None:
+        return None
+    return f"/api/v1/users/{user_id}/avatar?v={int(avatar_updated_at.timestamp() * 1000)}"
+
+
 class UserRead(BaseModel):
     id: int
     email: str
     display_name: str
     role: str
     body_weight_kg: float | None
+    avatar_url: str | None = None
+
+    @classmethod
+    def from_user(cls, user: User) -> "UserRead":
+        return cls(
+            id=user.id,  # type: ignore[arg-type]
+            email=user.email,
+            display_name=user.display_name,
+            role=user.role,
+            body_weight_kg=user.body_weight_kg,
+            avatar_url=avatar_url_for(user.id, user.avatar_updated_at),  # type: ignore[arg-type]
+        )
 
 
 class InviteCreate(BaseModel):

@@ -17,9 +17,11 @@ import {
   useListExercises,
   usePutNote,
   useToday,
+  useUpdateSession,
   useUpdateSessionExercise,
   useUpdateSet,
   type ExerciseRead,
+  type LastSet,
   type SessionExerciseRead,
   type SessionRead,
   type SetRead,
@@ -36,8 +38,52 @@ import { formatWeight } from '@/lib/weight'
 import { useActiveSession } from '@/stores/activeSession'
 import { useSettings } from '@/stores/settings'
 
+interface RecordMomentData {
+  exercise: string
+  records: number[]
+  weight: number
+  reps: number
+  e1: number
+}
+
+/** Vollbild-Moment bei neuem Rekord (Design „Rekord-Moment“). */
+function RecordMoment({ data, onClose }: { data: RecordMomentData; onClose: () => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Neuer Rekord"
+      className="safe-top safe-bottom fixed inset-0 z-50 flex flex-col justify-between bg-primary p-6 text-primary-foreground"
+    >
+      <p className="text-sm font-semibold uppercase tracking-widest opacity-80">{data.exercise}</p>
+      <div>
+        <h2 className="font-display text-7xl uppercase leading-none">
+          Neuer
+          <br />
+          Rekord
+        </h2>
+        <p className="mt-6 font-display text-5xl tabular-nums">
+          {formatWeight(data.weight)} kg × {data.reps}
+        </p>
+        <p className="mt-2 text-lg tabular-nums opacity-80">
+          e1RM {formatWeight(data.e1)} kg · {data.records.map((n) => `${n}RM`).join(' · ')}
+        </p>
+      </div>
+      <Button variant="secondary" size="lg" className="h-14 w-full" onClick={onClose}>
+        Weiter pumpen
+      </Button>
+    </div>
+  )
+}
+
+/** Geschätztes Maximum nach Epley (wie in backend/app/services/stats.py) */
+function e1rm(weight: number, reps: number): number {
+  return weight * (1 + reps / 30)
+}
+
 function SetRow({
   set,
+  prev,
   records,
   weightStep,
   loadType,
@@ -45,6 +91,7 @@ function SetRow({
   onDelete,
 }: {
   set: SetRead
+  prev: LastSet | undefined
   records: number[]
   weightStep: number
   loadType: string
@@ -68,35 +115,58 @@ function SetRow({
       </li>
     )
   }
+  const delta =
+    loadType === 'time' || !prev || set.is_warmup
+      ? null
+      : e1rm(set.weight_kg, set.reps) - e1rm(prev.weight_kg, prev.reps)
   return (
-    <li className="flex items-center gap-3 py-2">
-      <span className="w-6 text-center text-sm text-muted-foreground">
+    <li className="grid grid-cols-[2rem_1fr_1fr_3.5rem_auto] items-center gap-2 py-2">
+      <span className="text-center font-display text-lg text-muted-foreground">
         {set.is_warmup ? 'W' : set.set_number}
       </span>
-      <span className="flex-1 font-medium tabular-nums">
+      <span className="text-sm tabular-nums text-muted-foreground">
+        {prev
+          ? loadType === 'time'
+            ? `${prev.reps} s`
+            : `${prev.reps} × ${formatWeight(prev.weight_kg)} kg`
+          : '–'}
+      </span>
+      <span className="font-semibold tabular-nums">
         {loadType === 'time' ? `${set.reps} s` : `${set.reps} × ${formatWeight(set.weight_kg)} kg`}
       </span>
-      {records.length > 0 && (
-        <Badge variant="record" aria-label="Neuer Rekord">
-          Rekord {records.map((n) => `${n}RM`).join(' · ')}
-        </Badge>
-      )}
-      <button
-        type="button"
-        aria-label="Satz bearbeiten"
-        className="rounded-md p-2 hover:bg-accent"
-        onClick={() => setEditing(true)}
+      <span
+        className={`text-right text-sm font-semibold tabular-nums ${
+          delta != null && delta >= 0 ? 'text-primary' : 'text-muted-foreground'
+        }`}
+        aria-label="Veränderung ggü. letztem Mal"
       >
-        <Pencil className="h-4 w-4" />
-      </button>
-      <button
-        type="button"
-        aria-label="Satz löschen"
-        className="rounded-md p-2 hover:bg-accent"
-        onClick={onDelete}
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
+        {delta == null
+          ? '–'
+          : `${delta >= 0 ? '+' : '−'}${formatWeight(Math.abs(Math.round(delta * 10) / 10))}`}
+      </span>
+      <div className="flex items-center justify-end gap-1">
+        {records.length > 0 && (
+          <Badge variant="record" aria-label="Neuer Rekord">
+            Rekord {records.map((n) => `${n}RM`).join(' · ')}
+          </Badge>
+        )}
+        <button
+          type="button"
+          aria-label="Satz bearbeiten"
+          className="rounded-md p-2 hover:bg-accent"
+          onClick={() => setEditing(true)}
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Satz löschen"
+          className="rounded-md p-2 hover:bg-accent"
+          onClick={onDelete}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
     </li>
   )
 }
@@ -114,7 +184,45 @@ function PermanentNote({ exerciseId }: { exerciseId: number }) {
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => {
         if (draft != null && draft !== (data?.note ?? '')) {
-          put.mutate({ exerciseId, data: { note: draft } }, { onSuccess: () => setDraft(null) })
+          put.mutate(
+            { exerciseId, data: { note: draft } },
+            {
+              onSuccess: () => setDraft(null),
+              onError: (e) => toast.error(errorMessage(e)),
+            },
+          )
+        }
+      }}
+    />
+  )
+}
+
+/** Session-Notiz: speichert beim Verlassen des Feldes, wenn sich der Text geändert hat. */
+function SessionNote({ session }: { session: SessionRead }) {
+  const queryClient = useQueryClient()
+  const update = useUpdateSession()
+  const [draft, setDraft] = useState<string | null>(null)
+  return (
+    <Textarea
+      aria-label="Session-Notiz"
+      placeholder="Notiz zur Session"
+      rows={2}
+      value={draft ?? session.note ?? ''}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        if (draft != null && draft !== (session.note ?? '')) {
+          update.mutate(
+            { sessionId: session.id, data: { note: draft } },
+            {
+              onSuccess: async () => {
+                await queryClient.invalidateQueries({
+                  queryKey: getGetSessionDetailQueryKey(session.id),
+                })
+                setDraft(null)
+              },
+              onError: (e) => toast.error(errorMessage(e)),
+            },
+          )
         }
       }}
     />
@@ -126,16 +234,21 @@ function ExerciseCard({
   exercise,
   restSec,
   todayLast,
+  prevSets,
   recordsBySet,
   onRecords,
+  onRecordMoment,
   session,
 }: {
   se: SessionExerciseRead
   exercise: ExerciseRead | undefined
   restSec: number
   todayLast: { reps: number; weight_kg: number } | null
+  /** Arbeitssätze des letzten Trainings am selben Tag, Index = Satznummer - 1 */
+  prevSets: LastSet[]
   recordsBySet: Record<number, number[]>
   onRecords: (setId: number, records: number[]) => void
+  onRecordMoment: (moment: RecordMomentData) => void
   session: SessionRead
 }) {
   const queryClient = useQueryClient()
@@ -161,37 +274,41 @@ function ExerciseCard({
       : { reps: fallback?.reps ?? 8, weight: fallback?.weight_kg ?? 20 }
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: key })
+  const showError = (e: unknown) => toast.error(errorMessage(e))
 
-  const log = (v: SetValues) => {
+  const log = async (v: SetValues) => {
     const tempId = -Date.now()
-    const previous = queryClient.getQueryData<SessionRead>(key)
+    // Laufende Refetches abbrechen, damit ein veralteter Stand den Optimistic Update nicht überschreibt
+    await queryClient.cancelQueries({ queryKey: key })
     // Optimistic Update: Satz erscheint sofort, Timer startet ohne auf den Server zu warten
-    if (previous) {
-      queryClient.setQueryData<SessionRead>(key, {
-        ...previous,
-        exercises: previous.exercises.map((e) =>
-          e.id === se.id
-            ? {
-                ...e,
-                sets: [
-                  ...e.sets,
-                  {
-                    id: tempId,
-                    session_exercise_id: se.id,
-                    exercise_id: se.exercise_id,
-                    set_number: e.sets.length + 1,
-                    rest_sec: null,
-                    rpe: null,
-                    completed_at: new Date().toISOString(),
-                    records: [],
-                    ...v,
-                  },
-                ],
-              }
-            : e,
-        ),
-      })
-    }
+    queryClient.setQueryData<SessionRead>(key, (old) =>
+      old
+        ? {
+            ...old,
+            exercises: old.exercises.map((e) =>
+              e.id === se.id
+                ? {
+                    ...e,
+                    sets: [
+                      ...e.sets,
+                      {
+                        id: tempId,
+                        session_exercise_id: se.id,
+                        exercise_id: se.exercise_id,
+                        set_number: e.sets.length + 1,
+                        rest_sec: null,
+                        rpe: null,
+                        completed_at: new Date().toISOString(),
+                        records: [],
+                        ...v,
+                      },
+                    ],
+                  }
+                : e,
+            ),
+          }
+        : old,
+    )
     if (!v.is_warmup && !session.finished_at) startRest(restSec)
     addSet.mutate(
       { seId: se.id, data: v },
@@ -199,12 +316,33 @@ function ExerciseCard({
         onSuccess: (saved) => {
           if (saved.records.length > 0) {
             onRecords(saved.id, saved.records)
+            onRecordMoment({
+              exercise: exercise?.name ?? 'Übung',
+              records: saved.records,
+              weight: v.weight_kg,
+              reps: v.reps,
+              e1: v.weight_kg * (1 + v.reps / 30),
+            })
             toast.success(`Neuer Rekord: ${saved.records.map((n) => `${n}RM`).join(', ')}`)
           }
         },
         onError: (e) => {
-          if (previous) queryClient.setQueryData(key, previous)
-          toast.error(errorMessage(e))
+          // Nur den optimistischen Satz entfernen, andere noch ausstehende Sätze bleiben erhalten
+          queryClient.setQueryData<SessionRead>(key, (old) =>
+            old
+              ? {
+                  ...old,
+                  exercises: old.exercises.map((x) =>
+                    x.id === se.id
+                      ? { ...x, sets: x.sets.filter((s) => s.id !== tempId) }
+                      : x,
+                  ),
+                }
+              : old,
+          )
+          const detail =
+            loadType === 'time' ? `${v.reps} s` : `${v.reps} × ${formatWeight(v.weight_kg)} kg`
+          toast.error(`Satz nicht gespeichert (${detail}): ${errorMessage(e)}`)
         },
         onSettled: refresh,
       },
@@ -228,7 +366,7 @@ function ExerciseCard({
             className="rounded-md p-2 hover:bg-accent"
             onClick={() => {
               if (confirm('Übung mit allen Sätzen aus dieser Session entfernen?')) {
-                deleteSe.mutate({ seId: se.id }, { onSuccess: refresh })
+                deleteSe.mutate({ seId: se.id }, { onSuccess: refresh, onError: showError })
               }
             }}
           >
@@ -236,16 +374,33 @@ function ExerciseCard({
           </button>
         </div>
         <PermanentNote exerciseId={se.exercise_id} />
+        {se.sets.length > 0 && (
+          <div className="grid grid-cols-[2rem_1fr_1fr_3.5rem_auto] gap-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="text-center">Satz</span>
+            <span>Letztes Mal</span>
+            <span>Heute</span>
+            <span className="text-right">Δ e1RM</span>
+            <span />
+          </div>
+        )}
         <ul className="divide-y">
           {se.sets.map((s) => (
             <SetRow
               key={s.id}
               set={s}
+              prev={s.is_warmup ? undefined : prevSets[s.set_number - 1]}
               records={recordsBySet[s.id] ?? []}
               weightStep={weightStep}
               loadType={loadType}
-              onUpdate={(v) => updateSet.mutate({ setId: s.id, data: v }, { onSuccess: refresh })}
-              onDelete={() => deleteSet.mutate({ setId: s.id }, { onSuccess: refresh })}
+              onUpdate={(v) =>
+                updateSet.mutate(
+                  { setId: s.id, data: v },
+                  { onSuccess: refresh, onError: showError },
+                )
+              }
+              onDelete={() =>
+                deleteSet.mutate({ setId: s.id }, { onSuccess: refresh, onError: showError })
+              }
             />
           ))}
         </ul>
@@ -266,7 +421,7 @@ function ExerciseCard({
             if (e.target.value !== se.note) {
               updateSe.mutate(
                 { seId: se.id, data: { note: e.target.value } },
-                { onSuccess: refresh },
+                { onSuccess: refresh, onError: showError },
               )
             }
           }}
@@ -291,6 +446,7 @@ export function WorkoutPage() {
   const defaultRest = useSettings((s) => s.defaultRestSec)
   const [picker, setPicker] = useState(false)
   const [recordsBySet, setRecordsBySet] = useState<Record<number, number[]>>({})
+  const [moment, setMoment] = useState<RecordMomentData | null>(null)
 
   if (isLoading) return <Spinner />
   if (error || !session) {
@@ -314,6 +470,7 @@ export function WorkoutPage() {
 
   return (
     <>
+      {moment && <RecordMoment data={moment} onClose={() => setMoment(null)} />}
       <PageHeader
         title={finished ? 'Session' : 'Workout läuft'}
         back={finished ? '/history' : '/'}
@@ -333,6 +490,7 @@ export function WorkoutPage() {
                       toast.success('Training beendet')
                       void navigate({ to: '/' })
                     },
+                    onError: (e) => toast.error(errorMessage(e)),
                   },
                 )
               }
@@ -344,6 +502,9 @@ export function WorkoutPage() {
       />
       <div className="space-y-4 p-4">
         <p className="text-sm text-muted-foreground">
+          {session.cycle_name && (
+            <span className="font-semibold text-foreground">{session.cycle_name} · </span>
+          )}
           {formatDateTime(session.started_at)} ·{' '}
           {durationLabel(session.started_at, session.finished_at)}
         </p>
@@ -360,8 +521,10 @@ export function WorkoutPage() {
               exercise={byId.get(se.exercise_id)}
               restSec={plan?.target_rest_sec ?? defaultRest}
               todayLast={last}
+              prevSets={plan?.last_sets.filter((x) => !x.is_warmup) ?? []}
               recordsBySet={recordsBySet}
               onRecords={(setId, recs) => setRecordsBySet((m) => ({ ...m, [setId]: recs }))}
+              onRecordMoment={setMoment}
               session={session}
             />
           )
@@ -369,12 +532,7 @@ export function WorkoutPage() {
         <Button variant="outline" className="w-full" onClick={() => setPicker(true)}>
           <Plus className="h-4 w-4" /> Übung hinzufügen
         </Button>
-        <Textarea
-          aria-label="Session-Notiz"
-          placeholder="Notiz zur Session"
-          defaultValue={session.note}
-          rows={2}
-        />
+        <SessionNote session={session} />
         {finished && (
           <Button
             variant="destructive"
@@ -388,6 +546,7 @@ export function WorkoutPage() {
                       await queryClient.invalidateQueries()
                       void navigate({ to: '/history' })
                     },
+                    onError: (e) => toast.error(errorMessage(e)),
                   },
                 )
               }

@@ -5,6 +5,7 @@ export default {
   theme: {
     extend: {
       colors: {
+        gold: 'hsl(var(--gold))',
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -34,6 +35,10 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+      },
+      fontFamily: {
+        display: ['Anton', 'Barlow Semi Condensed', 'sans-serif'],
+        sans: ['Barlow Semi Condensed', 'system-ui', 'sans-serif'],
       },
       borderRadius: { lg: '0.75rem', md: '0.5rem', sm: '0.375rem' },
     },

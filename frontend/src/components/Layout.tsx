@@ -1,7 +1,9 @@
-import { Link, Outlet, useNavigate } from '@tanstack/react-router'
-import { ClipboardList, Dumbbell, History, Home, UserCircle } from 'lucide-react'
+import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { ClipboardList, Dumbbell, History, Home } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useMe } from '@/api'
 import { RestTimer } from '@/components/RestTimer'
+import { Avatar } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
 
 const NAV = [
@@ -23,8 +25,8 @@ export function BottomNav() {
             <Link
               to={to}
               activeOptions={{ exact: to === '/' }}
-              className="flex h-16 flex-col items-center justify-center gap-1 text-xs text-muted-foreground"
-              activeProps={{ className: 'text-primary font-semibold' }}
+              className="flex h-16 flex-col items-center justify-center gap-1 font-display text-xs uppercase tracking-wider text-muted-foreground"
+              activeProps={{ className: 'text-primary' }}
             >
               <Icon className="h-5 w-5" aria-hidden />
               {label}
@@ -37,11 +39,13 @@ export function BottomNav() {
 }
 
 export function AppLayout() {
+  // Workout läuft im Fokusmodus ohne Tab-Leiste (Design „Curlhard Redesign A“)
+  const focus = useRouterState({ select: (s) => s.location.pathname.startsWith('/workout/') })
   return (
-    <div className="mx-auto min-h-screen max-w-xl pb-40">
+    <div className={cn('mx-auto min-h-screen max-w-xl', focus ? 'pb-24' : 'pb-40')}>
       <Outlet />
-      <RestTimer />
-      <BottomNav />
+      <RestTimer focus={focus} />
+      {!focus && <BottomNav />}
     </div>
   )
 }
@@ -55,8 +59,9 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, back, actions, profile }: PageHeaderProps) {
   const navigate = useNavigate()
+  const me = useMe()
   return (
-    <header className="safe-top sticky top-0 z-10 flex items-center gap-2 border-b bg-background/95 px-4 py-3">
+    <header className="safe-top sticky top-0 z-10 flex items-center gap-2 border-b bg-background/95 px-4 py-3 backdrop-blur">
       {back && (
         <button
           type="button"
@@ -67,11 +72,11 @@ export function PageHeader({ title, back, actions, profile }: PageHeaderProps) {
           ←
         </button>
       )}
-      <h1 className={cn('flex-1 truncate text-xl font-bold')}>{title}</h1>
+      <h1 className={cn('flex-1 truncate text-2xl')}>{title}</h1>
       {actions}
       {profile && (
         <Link to="/settings" aria-label="Profil und Einstellungen" className="rounded-md p-1.5">
-          <UserCircle className="h-7 w-7" />
+          <Avatar name={me.data?.display_name ?? ''} src={me.data?.avatar_url} size="sm" />
         </Link>
       )}
     </header>
@@ -90,7 +95,7 @@ export function EmptyState({
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
       <Dumbbell className="h-10 w-10 text-muted-foreground" aria-hidden />
-      <p className="text-lg font-semibold">{title}</p>
+      <p className="font-display text-2xl uppercase">{title}</p>
       {hint && <p className="text-sm text-muted-foreground">{hint}</p>}
       {action}
     </div>

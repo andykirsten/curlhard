@@ -1,20 +1,25 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useRef, useState, type ChangeEvent } from 'react'
 import { toast } from 'sonner'
 import {
   exportData as fetchExport,
   useChangePassword,
   useDeleteAccount,
+  useDeleteAvatar,
   useLogout,
   useMe,
   useUpdateMe,
+  useUploadAvatar,
 } from '@/api'
 import { PageHeader } from '@/components/Layout'
+import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input, Select } from '@/components/ui/input'
+import { Input } from '@/components/ui/input'
+import { Segmented } from '@/components/ui/segmented'
 import { Label } from '@/components/ui/label'
+import { resizeAvatar } from '@/lib/avatar'
 import { errorMessage } from '@/lib/query'
 import { formatWeight, parseWeight } from '@/lib/weight'
 import { useActiveSession } from '@/stores/activeSession'
@@ -39,7 +44,12 @@ export function SettingsPage() {
   const logout = useLogout()
   const changePassword = useChangePassword()
   const deleteAccount = useDeleteAccount()
+  const uploadAvatar = useUploadAvatar()
+  const removeAvatar = useDeleteAvatar()
+  const avatarInput = useRef<HTMLInputElement>(null)
   const settings = useSettings()
+  const [displayName, setDisplayName] = useState<string | null>(null)
+  const [resizing, setResizing] = useState(false)
   const [bodyWeight, setBodyWeight] = useState<string | null>(null)
   const [pw, setPw] = useState({ current: '', next: '' })
   const [deletePw, setDeletePw] = useState('')
@@ -66,6 +76,42 @@ export function SettingsPage() {
     )
   }
 
+  const saveDisplayName = () => {
+    const name = (displayName ?? '').trim()
+    if (!name || name === me.data?.display_name) {
+      setDisplayName(null)
+      return
+    }
+    updateMe.mutate(
+      { data: { display_name: name } },
+      {
+        // Erst nach Erfolg zurücksetzen, sonst springt das Feld kurz auf den alten Namen
+        onSuccess: async () => {
+          await queryClient.invalidateQueries()
+          setDisplayName(null)
+        },
+        onError: (e) => toast.error(errorMessage(e)),
+      },
+    )
+  }
+
+  const onAvatarPicked = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      setResizing(true)
+      const blob = await resizeAvatar(file).finally(() => setResizing(false))
+      await uploadAvatar.mutateAsync({
+        data: { file: new File([blob], 'avatar.jpg', { type: 'image/jpeg' }) },
+      })
+      toast.success('Profilbild aktualisiert')
+      void queryClient.invalidateQueries()
+    } catch (err) {
+      toast.error(errorMessage(err))
+    }
+  }
+
   const exportData = async () => {
     const data = await fetchExport()
     const blob = new Blob([JSON.stringify(data, null, 2)], {
@@ -83,6 +129,58 @@ export function SettingsPage() {
     <>
       <PageHeader title="Einstellungen" back="/" />
       <div className="space-y-4 p-4">
+        <Section title="Profil">
+          <div className="flex items-center gap-4">
+            <Avatar name={me.data?.display_name ?? ''} src={me.data?.avatar_url} size="lg" />
+            <div className="flex flex-col items-start gap-2">
+              <input
+                ref={avatarInput}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                aria-label="Profilbild auswählen"
+                onChange={(e) => void onAvatarPicked(e)}
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={resizing || uploadAvatar.isPending}
+                onClick={() => avatarInput.current?.click()}
+              >
+                Bild ändern
+              </Button>
+              {me.data?.avatar_url && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={removeAvatar.isPending}
+                  onClick={() =>
+                    removeAvatar.mutate(undefined, {
+                      onSuccess: () => {
+                        toast.success('Profilbild entfernt')
+                        void queryClient.invalidateQueries()
+                      },
+                      onError: (err) => toast.error(errorMessage(err)),
+                    })
+                  }
+                >
+                  Entfernen
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="display-name">Anzeigename</Label>
+            <Input
+              id="display-name"
+              maxLength={120}
+              value={displayName ?? me.data?.display_name ?? ''}
+              onChange={(e) => setDisplayName(e.target.value)}
+              onBlur={saveDisplayName}
+            />
+          </div>
+        </Section>
+
         <p className="text-sm text-muted-foreground">
           Angemeldet als <strong>{me.data?.display_name}</strong> ({me.data?.email})
         </p>
@@ -119,32 +217,30 @@ export function SettingsPage() {
               }
             />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="step">Gewichtsschritt</Label>
-            <Select
-              id="step"
-              value={settings.weightStep}
-              onChange={(e) =>
-                settings.set({
-                  weightStep: Number(e.target.value) as 1.25 | 2.5,
-                })
-              }
-            >
-              <option value={1.25}>1,25 kg</option>
-              <option value={2.5}>2,5 kg</option>
-            </Select>
+          <div className="space-y-2">
+            <Label id="step-label">Gewichtsschritt</Label>
+            <Segmented
+              aria-labelledby="step-label"
+              value={String(settings.weightStep)}
+              options={[
+                { value: '1.25', label: '1,25 kg' },
+                { value: '2.5', label: '2,5 kg' },
+              ]}
+              onChange={(v) => settings.set({ weightStep: Number(v) as 1.25 | 2.5 })}
+            />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="theme">Darstellung</Label>
-            <Select
-              id="theme"
+          <div className="space-y-2">
+            <Label id="theme-label">Darstellung</Label>
+            <Segmented
+              aria-labelledby="theme-label"
               value={settings.theme}
-              onChange={(e) => settings.set({ theme: e.target.value as Theme })}
-            >
-              <option value="system">System</option>
-              <option value="light">Hell</option>
-              <option value="dark">Dunkel</option>
-            </Select>
+              options={[
+                { value: 'system', label: 'System' },
+                { value: 'light', label: 'Hell' },
+                { value: 'dark', label: 'Dunkel' },
+              ]}
+              onChange={(v) => settings.set({ theme: v as Theme })}
+            />
           </div>
         </Section>
 

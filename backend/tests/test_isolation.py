@@ -19,6 +19,9 @@ def world(alice, catalog):
     st = alice.post(
         f"{API}/session-exercises/{se['id']}/sets", json={"reps": 5, "weight_kg": 60}
     ).json()
+    cycle = alice.post(
+        f"{API}/cycles", json={"name": "Alice-Zyklus", "start_date": "2026-10-01"}
+    ).json()
     return {
         "private": private["id"],
         "plan": plan["id"],
@@ -27,6 +30,7 @@ def world(alice, catalog):
         "session": session["id"],
         "se": se["id"],
         "set": st["id"],
+        "cycle": cycle["id"],
     }
 
 
@@ -62,6 +66,12 @@ def _cases(w):
         ("get", f"/stats/exercises/{w['private']}/summary", None),
         ("get", f"/stats/exercises/{w['private']}/history", None),
         ("get", f"/stats/exercises/{w['private']}/records", None),
+        ("patch", f"/cycles/{w['cycle']}", {"name": "gehackt"}),
+        ("post", f"/cycles/{w['cycle']}/activate", None),
+        ("post", f"/cycles/{w['cycle']}/end", None),
+        ("delete", f"/cycles/{w['cycle']}", None),
+        ("get", f"/public-plans/{w['plan']}", None),
+        ("post", f"/public-plans/{w['plan']}/copy", None),
     ]
 
 
@@ -82,6 +92,8 @@ def test_owner_data_untouched_after_attacks(alice, bob, world):
     assert session["note"] == "" and len(session["exercises"][0]["sets"]) == 1
     assert session["exercises"][0]["sets"][0]["reps"] == 5
     assert alice.get(f"{API}/exercises/{world['private']}").json()["name"] == "Alices Geheimübung"
+    cycles = alice.get(f"{API}/cycles").json()
+    assert [c["name"] for c in cycles] == ["Alice-Zyklus"] and cycles[0]["is_active"] is True
 
 
 def test_lists_never_leak(alice, bob, world):
@@ -90,6 +102,8 @@ def test_lists_never_leak(alice, bob, world):
     names = {e["name"] for e in bob.get(f"{API}/exercises").json()}
     assert "Alices Geheimübung" not in names
     assert bob.get(f"{API}/today").json()["plan"] is None
+    assert bob.get(f"{API}/cycles").json() == []
+    assert bob.get(f"{API}/public-plans").json() == []
     overview = bob.get(f"{API}/stats/overview").json()["weeks"]
     assert all(w["volume"] == 0 and w["sessions"] == 0 for w in overview)
 
@@ -122,7 +136,18 @@ def test_all_user_endpoints_require_login(app, world):
     from fastapi.testclient import TestClient
 
     anon = TestClient(app, base_url="http://testserver")
-    for method, path, body in _cases(world) + [("get", "/today", None), ("get", "/plans", None)]:
+    extra = [
+        ("get", "/today", None),
+        ("get", "/plans", None),
+        ("get", "/cycles", None),
+        ("post", "/cycles", {"name": "X", "start_date": "2026-10-01"}),
+        ("get", "/users/online", None),
+        ("get", "/public-plans", None),
+        ("get", f"/users/{world['cycle']}/avatar", None),
+        ("put", "/auth/me/avatar", None),
+        ("delete", "/auth/me/avatar", None),
+    ]
+    for method, path, body in _cases(world) + extra:
         kwargs = {"json": body} if body is not None else {}
         r = getattr(anon, method)(f"{API}{path}", **kwargs)
         assert r.status_code == 401, f"{method.upper()} {path} -> {r.status_code}"

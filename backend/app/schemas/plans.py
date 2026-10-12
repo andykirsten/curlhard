@@ -9,6 +9,7 @@ class PlanCreate(BaseModel):
 class PlanUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = None
+    is_public: bool | None = None
 
 
 class PlanDayCreate(BaseModel):
@@ -71,4 +72,33 @@ class PlanRead(BaseModel):
     name: str
     description: str
     is_active: bool
+    is_public: bool = False
     days: list[PlanDayRead] = []
+
+
+class AuthorRead(BaseModel):
+    id: int
+    display_name: str
+    avatar_url: str | None
+
+
+class PublicPlanDaySummary(BaseModel):
+    name: str
+    weekday: int | None
+    exercise_count: int
+
+
+class PublicPlanSummary(BaseModel):
+    id: int
+    name: str
+    description: str
+    author: AuthorRead
+    day_count: int
+    exercise_count: int
+    days: list[PublicPlanDaySummary]
+
+
+class PublicPlanRead(PlanRead):
+    author: AuthorRead
+    # Übungsnamen inkl. privater Übungen des Autors (für die Leseansicht)
+    exercise_names: dict[str, str]

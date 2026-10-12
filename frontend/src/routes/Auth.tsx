@@ -8,8 +8,10 @@ function AuthShell({ title, children }: { title: string; children: React.ReactNo
   return (
     <main className="safe-top mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-6">
       <div className="text-center">
-        <h1 className="text-3xl font-extrabold tracking-tight">Curlhard</h1>
-        <p className="mt-1 text-muted-foreground">{title}</p>
+        <h1 className="font-display text-7xl uppercase leading-none">
+          Curl<span className="text-primary">hard</span>
+        </h1>
+        <p className="mt-2 text-sm uppercase tracking-widest text-muted-foreground">{title}</p>
       </div>
       {children}
     </main>
@@ -21,7 +23,7 @@ export function LoginPage() {
   const queryClient = useQueryClient()
   const login = useLogin()
   return (
-    <AuthShell title="Anmelden">
+    <AuthShell title="Jeder Satz zählt.">
       <LoginForm
         pending={login.isPending}
         serverError={login.error ? errorMessage(login.error) : null}

@@ -43,8 +43,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input, Select } from '@/components/ui/input'
 import { Sheet } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { WEEKDAYS } from '@/lib/dates'
+import { WEEKDAYS, WEEKDAYS_SHORT } from '@/lib/dates'
 import { reorderIds } from '@/lib/reorder'
 import { errorMessage } from '@/lib/query'
 
@@ -157,6 +158,41 @@ function ExerciseEditor({
   )
 }
 
+/** Wochenübersicht (Design „Plan bearbeiten“): Tipp auf einen Tag springt zur Trainingskarte. */
+function WeekGrid({ days }: { days: PlanDayRead[] }) {
+  return (
+    <div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+        Wochenplan
+      </p>
+      <div className="grid grid-cols-7 gap-1">
+        {WEEKDAYS_SHORT.map((short, i) => {
+          const day = days.find((d) => d.weekday === i)
+          return (
+            <button
+              key={short}
+              type="button"
+              disabled={!day}
+              aria-label={day ? `${WEEKDAYS[i]}: ${day.name}` : `${WEEKDAYS[i]}: kein Training`}
+              onClick={() =>
+                document.getElementById(`day-${day!.id}`)?.scrollIntoView({ behavior: 'smooth' })
+              }
+              className={`flex h-16 flex-col items-center justify-center gap-1 rounded-md border text-center ${
+                day ? 'border-primary bg-primary/10' : 'bg-card text-muted-foreground'
+              }`}
+            >
+              <span className="font-display text-sm uppercase">{short}</span>
+              <span className="w-full truncate px-0.5 text-[10px] leading-none">
+                {day ? day.name : '–'}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function DayCard({
   day,
   plan,
@@ -198,7 +234,7 @@ function DayCard({
   }
 
   return (
-    <Card>
+    <Card id={`day-${day.id}`}>
       <CardContent className="space-y-3">
         <div className="flex items-center gap-1">
           {handle}
@@ -364,6 +400,26 @@ export function PlanEditorPage() {
               )
           }}
         />
+        <div className="flex items-start justify-between gap-3 rounded-lg border bg-card p-4">
+          <div className="space-y-1">
+            <p className="font-semibold">Öffentlich teilen</p>
+            <p className="text-sm text-muted-foreground">
+              Andere Nutzer können diesen Plan ansehen und übernehmen.
+            </p>
+          </div>
+          <Switch
+            label="Öffentlich teilen"
+            checked={plan.is_public}
+            disabled={updatePlan.isPending}
+            onCheckedChange={(is_public) =>
+              updatePlan.mutate(
+                { planId: id, data: { is_public } },
+                { onSuccess: refresh, onError: fail },
+              )
+            }
+          />
+        </div>
+        {plan.days.length > 0 && <WeekGrid days={plan.days} />}
         {plan.days.length === 0 && (
           <EmptyState
             title="Noch keine Trainingstage"

@@ -1,9 +1,18 @@
+import logging
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError, OperationalError
+from sqlalchemy.orm.exc import StaleDataError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+logger = logging.getLogger("curlhard")
+
+CONFLICT_MESSAGE = "Konflikt mit einer gleichzeitigen Änderung – bitte erneut versuchen"
+BUSY_MESSAGE = "Datenbank ausgelastet – bitte erneut versuchen"
+INTERNAL_MESSAGE = "Interner Fehler"
 
 
 class ApiError(Exception):
@@ -52,3 +61,26 @@ def install_error_handlers(app: FastAPI) -> None:
             _body("validation_error", "Ungültige Eingabe", {"errors": errors}),
             status_code=422,
         )
+
+    @app.exception_handler(IntegrityError)
+    async def _integrity_error(request: Request, exc: IntegrityError):
+        logger.exception("Integritätsfehler bei %s %s", request.method, request.url.path)
+        return JSONResponse(_body("conflict", CONFLICT_MESSAGE), status_code=409)
+
+    @app.exception_handler(StaleDataError)
+    async def _stale_data(request: Request, exc: StaleDataError):
+        logger.exception("Veraltete Daten bei %s %s", request.method, request.url.path)
+        return JSONResponse(_body("conflict", CONFLICT_MESSAGE), status_code=409)
+
+    @app.exception_handler(OperationalError)
+    async def _operational_error(request: Request, exc: OperationalError):
+        logger.exception("Datenbankfehler bei %s %s", request.method, request.url.path)
+        text = str(exc).lower()
+        if "locked" in text or "busy" in text:
+            return JSONResponse(_body("db_busy", BUSY_MESSAGE), status_code=503)
+        return JSONResponse(_body("internal_error", INTERNAL_MESSAGE), status_code=500)
+
+    @app.exception_handler(Exception)
+    async def _unhandled(request: Request, exc: Exception):
+        logger.exception("Unerwarteter Fehler bei %s %s", request.method, request.url.path)
+        return JSONResponse(_body("internal_error", INTERNAL_MESSAGE), status_code=500)

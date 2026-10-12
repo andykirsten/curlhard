@@ -14,8 +14,15 @@ def get_settings_dep(request: Request) -> Settings:
     return request.app.state.settings
 
 
+WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
 def get_session(request: Request) -> Iterator[Session]:
-    with Session(request.app.state.engine) as session:
+    engine = request.app.state.engine
+    if request.method in WRITE_METHODS:
+        # Schreibende Requests starten mit BEGIN IMMEDIATE (siehe app/db.py)
+        engine = engine.execution_options(sqlite_immediate=True)
+    with Session(engine) as session:
         yield session
 
 

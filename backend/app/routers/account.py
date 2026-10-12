@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 
 from fastapi import APIRouter, Response
 from sqlalchemy import delete, or_, update
@@ -16,7 +16,9 @@ from app.models import (
     PlanExercise,
     SessionExercise,
     SetLog,
+    TrainingCycle,
     User,
+    UserAvatar,
     WorkoutSession,
 )
 from app.schemas.auth import AccountDelete
@@ -33,7 +35,7 @@ def _rows(db, model: type[SQLModel], **where) -> list[dict]:
 
 
 def _jsonable(d: dict) -> dict:
-    return {k: (v.isoformat() if isinstance(v, datetime) else v) for k, v in d.items()}
+    return {k: (v.isoformat() if isinstance(v, date) else v) for k, v in d.items()}
 
 
 @router.get("/export")
@@ -57,6 +59,10 @@ def export_data(user: CurrentUser, db: DbSession):
         "session_exercises": _rows(db, SessionExercise, user_id=uid),
         "sets": _rows(db, SetLog, user_id=uid),
         "exercise_notes": _rows(db, ExerciseNote, user_id=uid),
+        "training_cycles": _rows(db, TrainingCycle, user_id=uid),
+        # Avatar-Bytes bewusst nicht im Export, nur das Vorhandensein
+        "has_avatar": db.exec(select(UserAvatar.id).where(UserAvatar.user_id == uid)).first()  # type: ignore[arg-type]
+        is not None,
     }
 
 
@@ -70,6 +76,8 @@ def delete_account(body: AccountDelete, user: CurrentUser, db: DbSession, settin
     db.execute(delete(SetLog).where(SetLog.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(SessionExercise).where(SessionExercise.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(WorkoutSession).where(WorkoutSession.user_id == uid))  # type: ignore[arg-type]
+    db.execute(delete(TrainingCycle).where(TrainingCycle.user_id == uid))  # type: ignore[arg-type]
+    db.execute(delete(UserAvatar).where(UserAvatar.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(ExerciseNote).where(ExerciseNote.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(PlanExercise).where(PlanExercise.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(PlanDay).where(PlanDay.user_id == uid))  # type: ignore[arg-type]
@@ -90,7 +98,7 @@ def delete_account(body: AccountDelete, user: CurrentUser, db: DbSession, settin
             or_(InviteCode.created_by_user_id == uid)  # type: ignore[arg-type]
         )
     )
-    auth_service.revoke_all(db, uid)  # type: ignore[arg-type]
+    auth_service.revoke_all(db, uid, commit=False)  # type: ignore[arg-type]
     db.execute(delete(User).where(User.id == uid))  # type: ignore[arg-type]
     db.commit()
     response = Response(status_code=204)

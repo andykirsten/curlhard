@@ -9,7 +9,14 @@ import { useActiveSession } from '@/stores/activeSession'
  * Pausen-Timer: rechnet mit gespeichertem Endzeitpunkt statt Zählern.
  * Nach Bildschirmsperre/Tab-Wechsel wird beim Zurückkehren neu berechnet.
  */
-export function RestTimer({ now = () => Date.now() }: { now?: () => number }) {
+export function RestTimer({
+  now = () => Date.now(),
+  focus = false,
+}: {
+  now?: () => number
+  /** Im Fokusmodus (Workout) ohne Tab-Leiste: Dock weiter unten */
+  focus?: boolean
+}) {
   const endsAt = useActiveSession((s) => s.restEndsAt)
   const total = useActiveSession((s) => s.restTotalSec)
   const clear = useActiveSession((s) => s.clearRest)
@@ -49,7 +56,7 @@ export function RestTimer({ now = () => Date.now() }: { now?: () => number }) {
     <div
       role="timer"
       aria-live="off"
-      className={`safe-bottom fixed inset-x-0 bottom-16 z-30 mx-auto w-[calc(100%-1.5rem)] max-w-xl overflow-hidden rounded-xl border shadow-lg ${
+      className={`safe-bottom fixed inset-x-0 z-30 ${focus ? 'bottom-4' : 'bottom-16'} mx-auto w-[calc(100%-1.5rem)] max-w-xl overflow-hidden rounded-xl border shadow-lg ${
         finished ? 'bg-primary text-primary-foreground' : 'bg-card'
       }`}
     >
@@ -58,7 +65,7 @@ export function RestTimer({ now = () => Date.now() }: { now?: () => number }) {
           <div className="text-xs uppercase tracking-wide opacity-70">
             {finished ? 'Pause vorbei' : 'Pause'}
           </div>
-          <div className="text-3xl font-bold tabular-nums" data-testid="timer-clock">
+          <div className="font-display text-4xl tabular-nums" data-testid="timer-clock">
             {formatClock(remaining)}
           </div>
         </div>

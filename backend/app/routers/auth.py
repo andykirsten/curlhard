@@ -1,9 +1,12 @@
-from fastapi import APIRouter, Depends, Request, Response
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
+from sqlalchemy import delete
 from sqlmodel import select
 
 from app.deps import AppSettings, CurrentUser, DbSession, rate_limited
 from app.errors import ApiError
-from app.models import User
+from app.models import User, UserAvatar, utcnow
 from app.schemas.auth import (
     ChangePasswordCreate,
     LoginCreate,
@@ -13,6 +16,7 @@ from app.schemas.auth import (
 )
 from app.services import auth as auth_service
 from app.services import invites
+from app.services.avatar import MAX_AVATAR_BYTES, detect_image_type
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -54,7 +58,7 @@ def register(body: RegisterCreate, response: Response, db: DbSession, settings: 
     db.commit()
     db.refresh(user)
     _set_cookie(response, settings, auth_service.create_session(db, user, settings.session_days))
-    return user
+    return UserRead.from_user(user)
 
 
 @router.post("/login", response_model=UserRead, dependencies=[Depends(rate_limited)])
@@ -64,7 +68,7 @@ def login(body: LoginCreate, response: Response, db: DbSession, settings: AppSet
     if not user or not ok or not user.is_active:
         raise ApiError(401, "unauthorized", "E-Mail oder Passwort falsch")
     _set_cookie(response, settings, auth_service.create_session(db, user, settings.session_days))
-    return user
+    return UserRead.from_user(user)
 
 
 @router.post("/logout", status_code=204)
@@ -79,7 +83,7 @@ def logout(request: Request, db: DbSession, settings: AppSettings):
 
 @router.get("/me", response_model=UserRead)
 def me(user: CurrentUser):
-    return user
+    return UserRead.from_user(user)
 
 
 @router.patch("/me", response_model=UserRead)
@@ -89,7 +93,42 @@ def update_me(body: UserUpdate, user: CurrentUser, db: DbSession):
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user
+    return UserRead.from_user(user)
+
+
+@router.put("/me/avatar", response_model=UserRead)
+def upload_avatar(
+    user: CurrentUser,
+    db: DbSession,
+    file: Annotated[UploadFile, File(...)],
+):
+    data = file.file.read(MAX_AVATAR_BYTES + 1)
+    if len(data) > MAX_AVATAR_BYTES:
+        raise ApiError(422, "image_too_large", "Bild ist zu groß (max. 512 KB)")
+    content_type = detect_image_type(data)
+    if content_type is None:
+        raise ApiError(422, "invalid_image", "Ungültiges Bild")
+    avatar = db.exec(select(UserAvatar).where(UserAvatar.user_id == user.id)).first()
+    if avatar is None:
+        avatar = UserAvatar(user_id=user.id, content_type=content_type, data=data)  # type: ignore[arg-type]
+    else:
+        avatar.content_type = content_type
+        avatar.data = data
+    user.avatar_updated_at = utcnow()
+    db.add(avatar)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return UserRead.from_user(user)
+
+
+@router.delete("/me/avatar", status_code=204)
+def delete_avatar(user: CurrentUser, db: DbSession):
+    db.execute(delete(UserAvatar).where(UserAvatar.user_id == user.id))  # type: ignore[arg-type]
+    user.avatar_updated_at = None
+    db.add(user)
+    db.commit()
+    return Response(status_code=204)
 
 
 @router.post("/change-password", status_code=204)
@@ -100,8 +139,10 @@ def change_password(
         raise ApiError(400, "wrong_password", "Aktuelles Passwort ist falsch")
     user.password_hash = auth_service.hash_password(body.new_password)
     db.add(user)
+    # Passwort, Sitzungswiderruf und neue Sitzung in einer Transaktion: kein Zwischenzustand
+    auth_service.revoke_all(db, user.id, commit=False)  # type: ignore[arg-type]
+    token = auth_service.create_session(db, user, settings.session_days, commit=False)
     db.commit()
-    auth_service.revoke_all(db, user.id)  # type: ignore[arg-type]
     response = Response(status_code=204)
-    _set_cookie(response, settings, auth_service.create_session(db, user, settings.session_days))
+    _set_cookie(response, settings, token)
     return response

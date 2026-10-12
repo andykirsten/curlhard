@@ -1,7 +1,8 @@
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Literal
 
-from sqlalchemy import Index, UniqueConstraint
+import sqlalchemy as sa
+from sqlalchemy import Index, LargeBinary, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 Role = Literal["user", "admin"]
@@ -26,6 +27,16 @@ class User(Base, table=True):
     role: str = "user"
     is_active: bool = True
     body_weight_kg: float | None = None
+    last_seen_at: datetime | None = None
+    avatar_updated_at: datetime | None = None
+
+
+class UserAvatar(Base, table=True):
+    __tablename__ = "user_avatar"
+    __table_args__ = (UniqueConstraint("user_id"),)
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
+    content_type: str
+    data: bytes = Field(sa_type=LargeBinary)
 
 
 class AuthSession(Base, table=True):
@@ -78,6 +89,18 @@ class Plan(Base, table=True):
     name: str
     description: str = ""
     is_active: bool = False
+    is_public: bool = Field(default=False, sa_column_kwargs={"server_default": sa.false()})
+
+
+class TrainingCycle(Base, table=True):
+    __tablename__ = "training_cycle"
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
+    name: str
+    note: str = ""
+    start_date: date
+    end_date: date | None = None
+    plan_id: int | None = Field(default=None, foreign_key="plan.id", ondelete="SET NULL")
+    is_active: bool = Field(default=False, sa_column_kwargs={"server_default": sa.false()})
 
 
 class PlanDay(Base, table=True):
@@ -109,6 +132,10 @@ class WorkoutSession(Base, table=True):
     started_at: datetime = Field(default_factory=utcnow, index=True)
     finished_at: datetime | None = None
     note: str = ""
+    cycle_id: int | None = Field(
+        default=None, foreign_key="training_cycle.id", ondelete="SET NULL", index=True
+    )
+    cycle_name: str | None = None  # Snapshot, damit die Historie das Löschen überlebt
 
 
 class SessionExercise(Base, table=True):

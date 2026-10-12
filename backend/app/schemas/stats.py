@@ -103,7 +103,15 @@ class PlanRef(BaseModel):
     name: str
 
 
+class CycleRef(BaseModel):
+    id: int
+    name: str
+    start_date: date
+    end_date: date | None
+
+
 class TodayRead(BaseModel):
     plan: PlanRef | None
     day: TodayDay | None
     other_days: list[DayRef]
+    cycle: CycleRef | None = None

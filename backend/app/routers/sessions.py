@@ -32,7 +32,8 @@ from app.schemas.sessions import (
     SetRead,
     SetUpdate,
 )
-from app.schemas.stats import TodayRead
+from app.schemas.stats import CycleRef, TodayRead
+from app.services import cycles as cycle_service
 from app.services import stats
 
 router = APIRouter(tags=["sessions"])
@@ -65,6 +66,8 @@ def session_read(db: Session, user_id: int, ws: WorkoutSession) -> SessionRead:
         started_at=ws.started_at,
         finished_at=ws.finished_at,
         note=ws.note,
+        cycle_id=ws.cycle_id,
+        cycle_name=ws.cycle_name,
         exercises=[
             SessionExerciseRead(
                 id=e.id,  # type: ignore[arg-type]
@@ -84,10 +87,12 @@ def session_read(db: Session, user_id: int, ws: WorkoutSession) -> SessionRead:
 
 @router.get("/today", response_model=TodayRead)
 def today(user: CurrentUser, db: DbSession, weekday: int | None = None):
-    wd = weekday if weekday is not None else utcnow().weekday()
+    now = utcnow()
+    wd = weekday if weekday is not None else now.weekday()
+    cycle = _cycle_ref(db, user.id)
     plan = db.exec(select(Plan).where(Plan.user_id == user.id, Plan.is_active)).first()
     if plan is None:
-        return {"plan": None, "day": None, "other_days": []}
+        return {"plan": None, "day": None, "other_days": [], "cycle": cycle}
     days = db.exec(
         select(PlanDay)
         .where(PlanDay.user_id == user.id, PlanDay.plan_id == plan.id)
@@ -133,7 +138,20 @@ def today(user: CurrentUser, db: DbSession, weekday: int | None = None):
         "other_days": [
             {"id": d.id, "name": d.name, "weekday": d.weekday} for d in days if d is not day
         ],
+        "cycle": cycle,
     }
+
+
+def _cycle_ref(db: Session, user_id: int) -> dict | None:
+    cycle = cycle_service.get_active_cycle(db, user_id)
+    if cycle is None:
+        return None
+    return CycleRef(
+        id=cycle.id,  # type: ignore[arg-type]
+        name=cycle.name,
+        start_date=cycle.start_date,
+        end_date=cycle.end_date,
+    ).model_dump()
 
 
 def _last_sets(db: Session, user_id: int, exercise_id: int) -> list[dict]:
@@ -168,10 +186,13 @@ def _last_sets(db: Session, user_id: int, exercise_id: int) -> list[dict]:
 def create_session(body: SessionCreate, user: CurrentUser, db: DbSession):
     if body.plan_day_id is not None:
         get_owned(db, PlanDay, body.plan_day_id, user.id, "Trainingstag")  # type: ignore[arg-type]
+    active = cycle_service.get_active_cycle(db, user.id)  # type: ignore[arg-type]
     ws = WorkoutSession(
         user_id=user.id,  # type: ignore[arg-type]
         plan_day_id=body.plan_day_id,
         started_at=body.started_at or utcnow(),
+        cycle_id=active.id if active else None,
+        cycle_name=active.name if active else None,
     )
     db.add(ws)
     db.flush()
@@ -201,6 +222,7 @@ def list_sessions(
     db: DbSession,
     from_: Annotated[AwareDatetime | None, Query(alias="from")] = None,
     to: AwareDatetime | None = None,
+    cycle_id: int | None = None,
     limit: int = 50,
     offset: int = 0,
 ):
@@ -209,6 +231,8 @@ def list_sessions(
         stmt = stmt.where(WorkoutSession.started_at >= from_)
     if to is not None:
         stmt = stmt.where(WorkoutSession.started_at <= to)
+    if cycle_id is not None:
+        stmt = stmt.where(WorkoutSession.cycle_id == cycle_id)
     rows = db.exec(
         stmt.order_by(col(WorkoutSession.started_at).desc()).limit(limit).offset(offset)
     ).all()
@@ -232,6 +256,8 @@ def list_sessions(
                 started_at=ws.started_at,
                 finished_at=ws.finished_at,
                 note=ws.note,
+                cycle_id=ws.cycle_id,
+                cycle_name=ws.cycle_name,
                 exercise_count=ex_count,
                 set_count=set_count,
             )

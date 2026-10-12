@@ -75,6 +75,8 @@ class SessionRead(BaseModel):
     started_at: datetime
     finished_at: datetime | None
     note: str
+    cycle_id: int | None = None
+    cycle_name: str | None = None
     exercises: list[SessionExerciseRead] = []
 
 
@@ -84,5 +86,7 @@ class SessionSummary(BaseModel):
     started_at: datetime
     finished_at: datetime | None
     note: str
+    cycle_id: int | None = None
+    cycle_name: str | None = None
     exercise_count: int
     set_count: int

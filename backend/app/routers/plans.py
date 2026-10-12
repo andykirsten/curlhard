@@ -18,6 +18,7 @@ from app.schemas.plans import (
     PlanRead,
     PlanUpdate,
 )
+from app.services.plan_copy import clone_plan
 
 router = APIRouter(tags=["plans"])
 
@@ -56,6 +57,7 @@ def plan_read(db: Session, user_id: int, plan: Plan) -> PlanRead:
         name=plan.name,
         description=plan.description,
         is_active=plan.is_active,
+        is_public=plan.is_public,
         days=_day_reads(db, user_id, list(days)),
     )
 
@@ -150,40 +152,7 @@ def activate_plan(plan_id: int, user: CurrentUser, db: DbSession):
 @router.post("/plans/{plan_id}/duplicate", status_code=201, response_model=PlanRead)
 def duplicate_plan(plan_id: int, user: CurrentUser, db: DbSession):
     src = get_owned(db, Plan, plan_id, user.id, "Plan")  # type: ignore[arg-type]
-    copy = Plan(user_id=user.id, name=f"{src.name} (Kopie)", description=src.description)  # type: ignore[arg-type]
-    db.add(copy)
-    db.flush()
-    days = db.exec(
-        select(PlanDay).where(PlanDay.user_id == user.id, PlanDay.plan_id == src.id)
-    ).all()
-    for day in days:
-        new_day = PlanDay(
-            user_id=user.id,  # type: ignore[arg-type]
-            plan_id=copy.id,  # type: ignore[arg-type]
-            name=day.name,
-            weekday=day.weekday,
-            position=day.position,
-        )
-        db.add(new_day)
-        db.flush()
-        for pe in db.exec(
-            select(PlanExercise).where(
-                PlanExercise.user_id == user.id, PlanExercise.plan_day_id == day.id
-            )
-        ).all():
-            db.add(
-                PlanExercise(
-                    user_id=user.id,  # type: ignore[arg-type]
-                    plan_day_id=new_day.id,  # type: ignore[arg-type]
-                    exercise_id=pe.exercise_id,
-                    position=pe.position,
-                    target_sets=pe.target_sets,
-                    target_reps_min=pe.target_reps_min,
-                    target_reps_max=pe.target_reps_max,
-                    target_rest_sec=pe.target_rest_sec,
-                    note=pe.note,
-                )
-            )
+    copy = clone_plan(db, src, user.id, f"{src.name} (Kopie)")  # type: ignore[arg-type]
     db.commit()
     db.refresh(copy)
     return plan_read(db, user.id, copy)  # type: ignore[arg-type]

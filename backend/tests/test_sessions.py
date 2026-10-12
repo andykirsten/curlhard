@@ -20,7 +20,7 @@ def _active_plan(c, catalog, weekday=0):
 
 def test_today_without_plan(alice):
     body = alice.get(f"{API}/today").json()
-    assert body == {"plan": None, "day": None, "other_days": []}
+    assert body == {"plan": None, "day": None, "other_days": [], "cycle": None}
 
 
 def test_today_picks_weekday_and_includes_last_values(alice, catalog):

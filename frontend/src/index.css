@@ -2,45 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @layer base {
+  /* Farben aus dem Design „Curlhard Redesign A“ (Hell = :root, Dunkel = .dark) */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 30% 10%;
+    --background: 38 24% 91%;
+    --foreground: 26 20% 7%;
     --card: 0 0% 100%;
-    --card-foreground: 222 30% 10%;
-    --primary: 158 64% 36%;
+    --card-foreground: 26 20% 7%;
+    --primary: 12 91% 43%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 20% 94%;
-    --secondary-foreground: 222 30% 10%;
-    --muted: 210 20% 96%;
-    --muted-foreground: 215 14% 40%;
-    --accent: 210 20% 92%;
-    --accent-foreground: 222 30% 10%;
+    --secondary: 37 22% 84%;
+    --secondary-foreground: 26 20% 7%;
+    --muted: 0 0% 100%;
+    --muted-foreground: 30 10% 36%;
+    --accent: 37 22% 84%;
+    --accent-foreground: 26 20% 7%;
     --destructive: 0 72% 46%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 88%;
-    --input: 214 20% 82%;
-    --ring: 158 64% 36%;
+    --border: 36 17% 77%;
+    --input: 36 17% 77%;
+    --ring: 12 91% 43%;
+    --gold: 38 100% 33%;
   }
 
   .dark {
-    --background: 215 28% 7%;
-    --foreground: 210 20% 96%;
-    --card: 215 24% 11%;
-    --card-foreground: 210 20% 96%;
-    --primary: 158 60% 45%;
-    --primary-foreground: 215 28% 7%;
-    --secondary: 215 20% 17%;
-    --secondary-foreground: 210 20% 96%;
-    --muted: 215 20% 15%;
-    --muted-foreground: 215 14% 66%;
-    --accent: 215 20% 20%;
-    --accent-foreground: 210 20% 96%;
+    --background: 30 8% 5%;
+    --foreground: 37 39% 94%;
+    --card: 30 9% 9%;
+    --card-foreground: 37 39% 94%;
+    --primary: 12 100% 55%;
+    --primary-foreground: 20 50% 5%;
+    --secondary: 30 12% 13%;
+    --secondary-foreground: 37 39% 94%;
+    --muted: 30 9% 9%;
+    --muted-foreground: 31 10% 59%;
+    --accent: 30 12% 13%;
+    --accent-foreground: 37 39% 94%;
     --destructive: 0 68% 56%;
     --destructive-foreground: 0 0% 100%;
-    --border: 215 18% 22%;
-    --input: 215 18% 26%;
-    --ring: 158 60% 45%;
+    --border: 27 12% 18%;
+    --input: 27 12% 18%;
+    --ring: 12 100% 55%;
+    --gold: 41 100% 56%;
   }
 
   * {
@@ -54,6 +62,15 @@
   body {
     @apply bg-background text-foreground antialiased;
     overscroll-behavior-y: none;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: 'Anton', 'Barlow Semi Condensed', sans-serif;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   input,

@@ -8,10 +8,24 @@ from sqlmodel import Session
 from app.config import Settings, get_settings
 from app.db import make_engine
 from app.errors import install_error_handlers
-from app.routers import account, admin, auth, exercises, plans, sessions, stats
+from app.routers import (
+    account,
+    admin,
+    auth,
+    cycles,
+    exercises,
+    plans,
+    public_plans,
+    sessions,
+    stats,
+    users,
+)
 from app.services.ratelimit import RateLimiter
 
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# Avatar-Upload: nginx begrenzt ebenfalls auf 1 MB; hier vor dem Einlesen des Bodys abweisen
+AVATAR_PATH = "/api/v1/auth/me/avatar"
+MAX_AVATAR_REQUEST_BYTES = 1024 * 1024
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -48,8 +62,39 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     )
         return await call_next(request)
 
+    @app.middleware("http")
+    async def avatar_size_limit(request: Request, call_next):
+        if request.url.path == AVATAR_PATH:
+            try:
+                length = int(request.headers.get("content-length", "0"))
+            except ValueError:
+                length = 0
+            if length > MAX_AVATAR_REQUEST_BYTES:
+                return JSONResponse(
+                    {
+                        "error": {
+                            "code": "payload_too_large",
+                            "message": "Anfrage zu groß",
+                            "details": {},
+                        }
+                    },
+                    status_code=413,
+                )
+        return await call_next(request)
+
     v1 = APIRouter(prefix="/api/v1")
-    for module in (auth, admin, exercises, plans, sessions, stats, account):
+    for module in (
+        auth,
+        admin,
+        exercises,
+        plans,
+        public_plans,
+        cycles,
+        users,
+        sessions,
+        stats,
+        account,
+    ):
         v1.include_router(module.router)
     app.include_router(v1)
 
