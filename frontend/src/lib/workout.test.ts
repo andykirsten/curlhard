@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { deltaLabel, e1rm, exerciseVolume, formatElapsed, volumePercent } from './workout'
+import {
+  deltaLabel,
+  e1rm,
+  exerciseProgress,
+  exerciseVolume,
+  formatElapsed,
+  volumePercent,
+} from './workout'
 
 const set = (reps: number, weight_kg: number, is_warmup = false) => ({ reps, weight_kg, is_warmup })
 
@@ -19,6 +26,22 @@ describe('exerciseVolume / volumePercent', () => {
   it('computes percent of last time, null without baseline', () => {
     expect(volumePercent(480, 960)).toBe(50)
     expect(volumePercent(1000, 0)).toBeNull()
+  })
+})
+
+describe('exerciseProgress', () => {
+  it('counts working sets against the plan target', () => {
+    expect(exerciseProgress([], 3)).toEqual({ done: 0, target: 3, status: 'open' })
+    expect(exerciseProgress([set(10, 20, true), set(8, 60)], 3)).toEqual({
+      done: 1,
+      target: 3,
+      status: 'started',
+    })
+    expect(exerciseProgress([set(8, 60), set(8, 60), set(8, 60), set(6, 60)], 3).status).toBe('done')
+  })
+  it('is never done without a target', () => {
+    expect(exerciseProgress([set(8, 60)])).toEqual({ done: 1, target: null, status: 'started' })
+    expect(exerciseProgress([set(10, 20, true)], 0).status).toBe('open')
   })
 })
 

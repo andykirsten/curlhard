@@ -18,6 +18,22 @@ export function exerciseVolume(sets: SetLike[], loadType = 'weight'): number {
     .reduce((sum, s) => sum + (loadType === 'time' ? s.reps : s.reps * s.weight_kg), 0)
 }
 
+export interface ExerciseProgress {
+  /** Anzahl Arbeitssätze (ohne Aufwärmen) */
+  done: number
+  /** Ziel-Sätze laut Plan, null ohne Plan */
+  target: number | null
+  status: 'open' | 'started' | 'done'
+}
+
+/** Fortschritt einer Übung in der Session: Arbeitssätze gegen das Planziel. */
+export function exerciseProgress(sets: SetLike[], targetSets?: number | null): ExerciseProgress {
+  const done = sets.filter((s) => !s.is_warmup).length
+  const target = targetSets != null && targetSets > 0 ? targetSets : null
+  const status = target != null && done >= target ? 'done' : done > 0 ? 'started' : 'open'
+  return { done, target, status }
+}
+
 /** Anteil am letzten Mal in Prozent (gerundet, nicht gedeckelt); null ohne Vergleichswert. */
 export function volumePercent(today: number, last: number): number | null {
   if (last <= 0) return null

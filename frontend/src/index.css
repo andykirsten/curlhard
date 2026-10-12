@@ -216,3 +216,11 @@
 .safe-top {
   padding-top: env(safe-area-inset-top);
 }
+
+/* Horizontal scrollbare Leisten ohne sichtbare Scrollbar (ExerciseStrip.tsx) */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -33,6 +33,7 @@ import { SetEntry, type SetValues } from '@/components/SetEntry'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/input'
 import { Sheet } from '@/components/ui/sheet'
+import { ExerciseStrip } from '@/components/workout/ExerciseStrip'
 import { InputDock } from '@/components/workout/InputDock'
 import { SetTable, type ActiveRow } from '@/components/workout/SetTable'
 import { VolumeBar } from '@/components/workout/VolumeBar'
@@ -40,7 +41,7 @@ import { WorkoutHeader } from '@/components/workout/WorkoutHeader'
 import { apiWeekday } from '@/lib/dates'
 import { errorMessage } from '@/lib/query'
 import { formatWeight } from '@/lib/weight'
-import { e1rm, exerciseVolume } from '@/lib/workout'
+import { e1rm, exerciseProgress, exerciseVolume } from '@/lib/workout'
 import { useActiveSession } from '@/stores/activeSession'
 import { useSettings } from '@/stores/settings'
 
@@ -575,11 +576,30 @@ export function WorkoutPage() {
   return (
     <>
       {moment && <RecordMoment data={moment} onClose={() => setMoment(null)} />}
-      {finished ? (
-        <PageHeader title="Session" back="/history" />
-      ) : (
-        <WorkoutHeader startedAt={session.started_at} pending={finish.isPending} onFinish={onFinish} />
-      )}
+      {/* Kopf + Übungs-Leiste bleiben beim Scrollen sichtbar */}
+      <div className="sticky top-0 z-10 bg-background/95 pb-2 backdrop-blur">
+        {finished ? (
+          <PageHeader title="Session" back="/history" />
+        ) : (
+          <WorkoutHeader
+            startedAt={session.started_at}
+            pending={finish.isPending}
+            onFinish={onFinish}
+          />
+        )}
+        {count > 0 && (
+          <ExerciseStrip
+            items={session.exercises.map((x) => ({
+              id: x.id,
+              name: byId.get(x.exercise_id)?.name ?? `Übung ${x.exercise_id}`,
+              progress: exerciseProgress(x.sets, planned.get(x.exercise_id)?.target_sets),
+            }))}
+            selected={index}
+            onSelect={setFocusIndex}
+            onAdd={finished ? undefined : () => setPicker(true)}
+          />
+        )}
+      </div>
       <div className={finished ? 'pb-6' : 'pb-80'}>
         {session.cycle_name && (
           <p className="px-5 pb-2 text-sm font-semibold text-muted-foreground">
