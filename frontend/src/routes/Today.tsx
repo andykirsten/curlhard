@@ -1,15 +1,26 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import { useCreateSession, useListOnlineUsers, useToday, type TodayExercise } from '@/api'
+import {
+  useCreateSession,
+  useListOnlineUsers,
+  useListSessions,
+  useToday,
+  type TodayExercise,
+} from '@/api'
 import { EmptyState, PageHeader, Spinner } from '@/components/Layout'
+import { WeekStrip } from '@/components/WeekStrip'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Badge, Card, CardContent } from '@/components/ui/card'
 import { cycleWeek } from '@/lib/cycle'
-import { apiWeekday, weekdayLabel } from '@/lib/dates'
+import { apiWeekday } from '@/lib/dates'
 import { errorMessage } from '@/lib/query'
+import { useLocalDayStart } from '@/lib/useLocalDayStart'
+import { buildWeek, dayKicker, planByWeekday, splitDayName, weekRangeLabel } from '@/lib/week'
 import { formatWeight } from '@/lib/weight'
+import { cn } from '@/lib/utils'
 import { useActiveSession } from '@/stores/activeSession'
 
 /** Karte „Gerade online“: aktualisiert sich minütlich, ausgeblendet ohne Treffer. */
@@ -44,11 +55,51 @@ function lastLabel(ex: TodayExercise): string | null {
   return `Zuletzt ${work.length}× ${top.reps} @ ${formatWeight(top.weight_kg)} kg`
 }
 
+/** Titel des gewählten Tages: „Ganzkörper B“ mit Buchstaben in Akzentfarbe, sonst „Ruhetag“. */
+function DayTitle({ name }: { name: string | null }) {
+  const { title, letter } = name ? splitDayName(name) : { title: 'Ruhetag', letter: '' }
+  return (
+    <h2 className="mt-3 break-words font-display text-[60px] uppercase leading-[0.86]">
+      {title}
+      {letter && <span className="text-primary"> {letter}</span>}
+    </h2>
+  )
+}
+
+/** Großer Button der Tageskarte (Design: 60 px hoch, Anton 24 px); `outline` = transparent mit Rahmen. */
+function HeroButton({
+  outline,
+  className,
+  ...props
+}: ComponentProps<typeof Button> & { outline?: boolean; children: ReactNode }) {
+  return (
+    <Button
+      variant={outline ? 'outline' : 'default'}
+      className={cn(
+        'h-[60px] w-full rounded-2xl font-display text-2xl font-normal uppercase',
+        outline && 'bg-transparent',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
 export function TodayPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const weekday = apiWeekday()
-  const { data, isLoading, error } = useToday({ weekday })
+  // Wochenleiste: Index 0 = heute; Mitternacht und Rückkehr in die App springen auf heute
+  const [selected, setSelected] = useState(0)
+  const dayStart = useLocalDayStart(() => setSelected(0))
+  const weekday = (apiWeekday(dayStart) + selected) % 7
+  const { data, isLoading, error } = useToday(
+    { weekday },
+    { query: { placeholderData: keepPreviousData } },
+  )
+  // Erledigt = beendete Session mit Start heute (über Mitternacht zählt der Starttag)
+  const sessionsToday = useListSessions({ from: dayStart.toISOString() })
+  const doneSession = sessionsToday.data?.find((s) => s.finished_at != null) ?? null
+  const listRef = useRef<HTMLElement>(null)
   const create = useCreateSession()
   const startSession = useActiveSession((s) => s.startSession)
   const activeId = useActiveSession((s) => s.sessionId)
@@ -69,12 +120,25 @@ export function TodayPage() {
       },
     )
 
+  const byWeekday = useMemo(
+    () => planByWeekday([...(data?.day ? [data.day] : []), ...(data?.other_days ?? [])]),
+    [data],
+  )
+  const week = useMemo(
+    () => buildWeek(dayStart, byWeekday, doneSession != null),
+    [dayStart, byWeekday, doneSession],
+  )
+  const selDay = week[selected]!
+  // Während der Wochentag nachlädt, gehört `data.day` evtl. noch zum vorher gewählten Tag
+  const day = data?.day && data.day.id === selDay.plan?.id ? data.day : null
+  const done = selDay.status === 'done'
+
   if (isLoading) return <Spinner />
   if (error) return <p className="p-6 text-destructive">{errorMessage(error)}</p>
 
   return (
     <>
-      <PageHeader title={`Heute · ${weekdayLabel(weekday)}`} profile />
+      <PageHeader title="Heute" profile />
       <div className="space-y-4 p-4">
         {data?.cycle && (
           <span className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
@@ -112,27 +176,79 @@ export function TodayPage() {
           />
         )}
 
-        {data?.plan && !data.day && (
-          <EmptyState
-            title="Heute ist Ruhetag"
-            hint={`In „${data.plan.name}“ ist für ${weekdayLabel(weekday)} nichts geplant.`}
-          />
+        {data?.plan && (
+          <section aria-label="Tagesauswahl">
+            <p className="text-[13px] font-bold uppercase leading-none tracking-[0.18em] text-primary">
+              {dayKicker(selDay)}
+            </p>
+            <DayTitle name={selDay.plan?.name ?? null} />
+            <p className="mt-3 min-h-[15px] text-[15px] font-semibold leading-none text-muted-foreground">
+              {!selDay.plan
+                ? 'Kein Training geplant'
+                : done
+                  ? 'Erledigt'
+                  : day
+                    ? `${day.exercises.length} Übungen · ${day.exercises.reduce((n, e) => n + e.target_sets, 0)} Sätze`
+                    : null}
+            </p>
+            <div className="mt-[18px]">
+              <WeekStrip week={week} selected={selected} onSelect={setSelected} />
+            </div>
+            <div className="mt-2.5 flex justify-between text-xs font-semibold leading-none text-muted-foreground">
+              <span>{weekRangeLabel(week)}</span>
+              {selected !== 0 && (
+                <button
+                  type="button"
+                  className="font-bold text-primary"
+                  onClick={() => setSelected(0)}
+                >
+                  ← Zurück zu heute
+                </button>
+              )}
+            </div>
+            <div className="mt-5">
+              {selDay.plan && selected === 0 && !done && (
+                <HeroButton disabled={create.isPending} onClick={() => start(selDay.plan!.id)}>
+                  Workout starten
+                </HeroButton>
+              )}
+              {done && doneSession && (
+                <HeroButton outline asChild>
+                  <Link to="/workout/$sessionId" params={{ sessionId: String(doneSession.id) }}>
+                    Zusammenfassung
+                  </Link>
+                </HeroButton>
+              )}
+              {selDay.plan && selected !== 0 && (
+                <HeroButton
+                  outline
+                  onClick={() =>
+                    listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }
+                >
+                  Vorschau ansehen
+                </HeroButton>
+              )}
+              {!selDay.plan && selected === 0 && (
+                <HeroButton outline disabled={create.isPending} onClick={() => start()}>
+                  Trotzdem trainieren
+                </HeroButton>
+              )}
+              {!selDay.plan && selected !== 0 && (
+                <HeroButton outline asChild>
+                  <Link to="/plans/$planId" params={{ planId: String(data.plan.id) }}>
+                    Training einplanen
+                  </Link>
+                </HeroButton>
+              )}
+            </div>
+          </section>
         )}
 
-        {data?.day && (
-          <section aria-label={data.day.name} className="space-y-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                {data.plan?.name}
-              </p>
-              <h2 className="font-display text-5xl uppercase leading-none">{data.day.name}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {data.day.exercises.length} Übungen ·{' '}
-                {data.day.exercises.reduce((n, e) => n + e.target_sets, 0)} Sätze
-              </p>
-            </div>
+        {day && (
+          <section ref={listRef} aria-label={day.name} className="scroll-mt-20">
             <ol className="divide-y rounded-lg border bg-card">
-              {data.day.exercises.map((ex, i) => (
+              {day.exercises.map((ex, i) => (
                 <li key={ex.plan_exercise_id} className="flex items-center gap-3 px-4 py-3">
                   <span className="w-8 font-display text-2xl text-primary tabular-nums">
                     {String(i + 1).padStart(2, '0')}
@@ -153,14 +269,6 @@ export function TodayPage() {
                 </li>
               ))}
             </ol>
-            <Button
-              size="lg"
-              className="h-14 w-full font-display text-xl uppercase tracking-wide"
-              disabled={create.isPending}
-              onClick={() => start(data.day!.id)}
-            >
-              Workout starten
-            </Button>
           </section>
         )}
 
