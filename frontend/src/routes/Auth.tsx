@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useLogin, useRegister } from '@/api'
+import { AmbientLayer } from '@/components/AmbientLayer'
 import { LoginForm, RegisterForm } from '@/components/AuthForm'
 import { LoginEmblem, type EmblemPhase } from '@/components/LoginEmblem'
 import { errorMessage } from '@/lib/query'
@@ -28,6 +29,7 @@ export function LoginPage() {
   const [pulse, setPulse] = useState(0)
   return (
     <main className="relative mx-auto flex min-h-screen max-w-md flex-col overflow-hidden px-7 pb-10 pt-[max(48px,env(safe-area-inset-top))]">
+      <AmbientLayer profile="login" />
       <LoginEmblem
         phase={phase}
         pulse={pulse}

@@ -2,8 +2,10 @@ import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-route
 import { ClipboardList, Dumbbell, History, Home } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useMe } from '@/api'
+import { AmbientLayer } from '@/components/AmbientLayer'
 import { RestTimer } from '@/components/RestTimer'
 import { Avatar } from '@/components/ui/avatar'
+import { ambientProfileFor, useRestRunning } from '@/lib/ambient'
 import { cn } from '@/lib/utils'
 
 const NAV = [
@@ -40,10 +42,17 @@ export function BottomNav() {
 
 export function AppLayout() {
   // Workout läuft im Fokusmodus ohne Tab-Leiste (Design „Curlhard Redesign A“)
-  const focus = useRouterState({ select: (s) => s.location.pathname.startsWith('/workout/') })
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const focus = pathname.startsWith('/workout/')
+  // Im Workout wird der Hintergrund lebendiger, solange der Pausen-Timer läuft
+  const restRunning = useRestRunning()
   return (
     <div className={cn('mx-auto min-h-screen max-w-xl', focus ? 'pb-24' : 'pb-40')}>
-      <Outlet />
+      <AmbientLayer fixed profile={ambientProfileFor(pathname, restRunning)} />
+      {/* positioniert, damit der Inhalt über der Hintergrund-Ebene liegt */}
+      <div className="relative">
+        <Outlet />
+      </div>
       <RestTimer focus={focus} />
       {!focus && <BottomNav />}
     </div>
