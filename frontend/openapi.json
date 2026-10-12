@@ -2412,6 +2412,49 @@
         }
       }
     },
+    "/api/v1/sessions/{session_id}/previous": {
+      "get": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Get Session Previous",
+        "description": "Vergleichswerte je Übung: letztes Training desselben Plantags, sonst letzte Session.",
+        "operationId": "get_session_previous",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionPrevious"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sessions/{session_id}/finish": {
       "post": {
         "tags": [
@@ -4470,6 +4513,84 @@
         "type": "object",
         "title": "PlanUpdate"
       },
+      "PreviousExercise": {
+        "properties": {
+          "exercise_id": {
+            "type": "integer",
+            "title": "Exercise Id"
+          },
+          "target_sets": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Sets"
+          },
+          "target_rest_sec": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Rest Sec"
+          },
+          "source_session_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Session Id"
+          },
+          "source_started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Started At"
+          },
+          "same_plan_day": {
+            "type": "boolean",
+            "title": "Same Plan Day",
+            "default": false
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/LastSet"
+            },
+            "type": "array",
+            "title": "Sets",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "exercise_id",
+          "target_sets",
+          "target_rest_sec",
+          "source_session_id",
+          "source_started_at",
+          "same_plan_day",
+          "sets"
+        ],
+        "title": "PreviousExercise",
+        "description": "Vergleichswerte einer Übung der Session aus dem vorherigen Training."
+      },
       "PublicPlanDaySummary": {
         "properties": {
           "name": {
@@ -4883,6 +5004,35 @@
           "duration_sec"
         ],
         "title": "SessionMetrics"
+      },
+      "SessionPrevious": {
+        "properties": {
+          "plan_day_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Day Name"
+          },
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/PreviousExercise"
+            },
+            "type": "array",
+            "title": "Exercises",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_day_name",
+          "exercises"
+        ],
+        "title": "SessionPrevious"
       },
       "SessionRead": {
         "properties": {

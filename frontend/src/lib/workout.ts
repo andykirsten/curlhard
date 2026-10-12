@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/dates'
 import { formatWeight } from '@/lib/weight'
 
 /** Geschätztes Maximum nach Epley (wie in backend/app/services/stats.py) */
@@ -16,6 +17,35 @@ export function exerciseVolume(sets: SetLike[], loadType = 'weight'): number {
   return sets
     .filter((s) => !s.is_warmup)
     .reduce((sum, s) => sum + (loadType === 'time' ? s.reps : s.reps * s.weight_kg), 0)
+}
+
+export interface ExerciseProgress {
+  /** Anzahl Arbeitssätze (ohne Aufwärmen) */
+  done: number
+  /** Ziel-Sätze laut Plan, null ohne Plan */
+  target: number | null
+  status: 'open' | 'started' | 'done'
+}
+
+/** Fortschritt einer Übung in der Session: Arbeitssätze gegen das Planziel. */
+export function exerciseProgress(sets: SetLike[], targetSets?: number | null): ExerciseProgress {
+  const done = sets.filter((s) => !s.is_warmup).length
+  const target = targetSets != null && targetSets > 0 ? targetSets : null
+  const status = target != null && done >= target ? 'done' : done > 0 ? 'started' : 'open'
+  return { done, target, status }
+}
+
+/**
+ * Herkunft der „Letztes Mal“-Werte: „Letztes Mal: Tag 2 · Mo, 05.10.“, bei Rückgriff auf eine
+ * andere Session „anderes Training“, ohne Vorwerte „Noch kein Vergleich“.
+ */
+export function compareLabel(
+  prev: { source_started_at: string | null; same_plan_day: boolean } | undefined,
+  planDayName: string | null | undefined,
+): string {
+  if (!prev?.source_started_at) return 'Noch kein Vergleich'
+  const source = prev.same_plan_day ? (planDayName ?? 'gleicher Tag') : 'anderes Training'
+  return `Letztes Mal: ${source} · ${formatDate(prev.source_started_at, 'EEEEEE, dd.MM.')}`
 }
 
 /** Anteil am letzten Mal in Prozent (gerundet, nicht gedeckelt); null ohne Vergleichswert. */

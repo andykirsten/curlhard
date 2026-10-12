@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
+from app.schemas.stats import LastSet
+
 
 class SessionCreate(BaseModel):
     plan_day_id: int | None = None
@@ -78,6 +80,27 @@ class SessionRead(BaseModel):
     cycle_id: int | None = None
     cycle_name: str | None = None
     exercises: list[SessionExerciseRead] = []
+
+
+class PreviousExercise(BaseModel):
+    """Vergleichswerte einer Übung der Session aus dem vorherigen Training."""
+
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+    exercise_id: int
+    #: Ziele aus dem Plantag der Session; None ohne Plantag oder für außerplanmäßige Übungen
+    target_sets: int | None = None
+    target_rest_sec: int | None = None
+    source_session_id: int | None = None
+    source_started_at: datetime | None = None
+    #: False = Rückgriff auf eine beliebige Session (kein früheres Training dieses Plantags)
+    same_plan_day: bool = False
+    sets: list[LastSet] = []
+
+
+class SessionPrevious(BaseModel):
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+    plan_day_name: str | None = None
+    exercises: list[PreviousExercise] = []
 
 
 class SessionSummary(BaseModel):

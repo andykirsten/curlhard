@@ -6,6 +6,7 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   getGetSessionDetailQueryKey,
+  getGetSessionPreviousQueryKey,
   useAddSessionExercise,
   useAddSet,
   useDeleteSession,
@@ -15,9 +16,9 @@ import {
   useFinishSession,
   useGetNote,
   useGetSessionDetail,
+  useGetSessionPrevious,
   useListExercises,
   usePutNote,
-  useToday,
   useUpdateSession,
   useUpdateSessionExercise,
   useUpdateSet,
@@ -33,14 +34,14 @@ import { SetEntry, type SetValues } from '@/components/SetEntry'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/input'
 import { Sheet } from '@/components/ui/sheet'
+import { ExerciseStrip } from '@/components/workout/ExerciseStrip'
 import { InputDock } from '@/components/workout/InputDock'
 import { SetTable, type ActiveRow } from '@/components/workout/SetTable'
 import { VolumeBar } from '@/components/workout/VolumeBar'
 import { WorkoutHeader } from '@/components/workout/WorkoutHeader'
-import { apiWeekday } from '@/lib/dates'
 import { errorMessage } from '@/lib/query'
 import { formatWeight } from '@/lib/weight'
-import { e1rm, exerciseVolume } from '@/lib/workout'
+import { compareLabel, e1rm, exerciseProgress, exerciseVolume } from '@/lib/workout'
 import { useActiveSession } from '@/stores/activeSession'
 import { useSettings } from '@/stores/settings'
 
@@ -167,6 +168,7 @@ function ExerciseFocus({
   exercise,
   restSec,
   prevSets,
+  prevLabel,
   recordsBySet,
   onRecords,
   onRecordMoment,
@@ -180,8 +182,10 @@ function ExerciseFocus({
   nextName: string | null
   exercise: ExerciseRead | undefined
   restSec: number
-  /** Arbeitssätze des letzten Trainings am selben Tag, Index = Arbeitssatz-Nr. - 1 */
+  /** Arbeitssätze des letzten Trainings desselben Plantags, Index = Arbeitssatz-Nr. - 1 */
   prevSets: LastSet[]
+  /** Herkunft der Vergleichswerte, z. B. „Letztes Mal: Tag 2 · Mo, 05.10.“ */
+  prevLabel: string
   recordsBySet: Record<number, number[]>
   onRecords: (setId: number, records: number[]) => void
   onRecordMoment: (moment: RecordMomentData) => void
@@ -385,11 +389,17 @@ function ExerciseFocus({
         <button
           type="button"
           aria-label="Memos bearbeiten"
-          className="mt-1 mb-3 block w-full truncate text-left text-sm font-medium italic text-muted-foreground"
+          className="mt-1 block w-full truncate text-left text-sm font-medium italic text-muted-foreground"
           onClick={() => setNotesOpen(true)}
         >
           {memo ? `Memo: ${memo}` : se.note ? `Session-Memo: ${se.note}` : 'Memo hinzufügen'}
         </button>
+        <p
+          className="mt-1 mb-2 truncate text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
+          data-testid="prev-source"
+        >
+          {prevLabel}
+        </p>
         <SetTable
           sets={se.sets}
           prevSets={prevSets}
@@ -518,7 +528,8 @@ export function WorkoutPage() {
   const queryClient = useQueryClient()
   const { data: session, isLoading, error } = useGetSessionDetail(id)
   const exercises = useListExercises({ limit: 200, include_inactive: true })
-  const today = useToday({ weekday: apiWeekday() })
+  // Vergleichswerte und Ziele kommen vom Plantag der Session, nicht vom heutigen Wochentag
+  const previous = useGetSessionPrevious(id)
   const addExercise = useAddSessionExercise()
   const finish = useFinishSession()
   const remove = useDeleteSession()
@@ -541,7 +552,7 @@ export function WorkoutPage() {
 
   const byId = new Map((exercises.data ?? []).map((e) => [e.id, e]))
   const planned = new Map(
-    (today.data?.day?.exercises ?? []).map((e) => [e.exercise_id, e] as const),
+    (previous.data?.exercises ?? []).map((e) => [e.exercise_id, e] as const),
   )
   const finished = session.finished_at != null
   const refresh = () =>
@@ -575,11 +586,30 @@ export function WorkoutPage() {
   return (
     <>
       {moment && <RecordMoment data={moment} onClose={() => setMoment(null)} />}
-      {finished ? (
-        <PageHeader title="Session" back="/history" />
-      ) : (
-        <WorkoutHeader startedAt={session.started_at} pending={finish.isPending} onFinish={onFinish} />
-      )}
+      {/* Kopf + Übungs-Leiste bleiben beim Scrollen sichtbar */}
+      <div className="sticky top-0 z-10 bg-background/95 pb-2 backdrop-blur">
+        {finished ? (
+          <PageHeader title="Session" back="/history" />
+        ) : (
+          <WorkoutHeader
+            startedAt={session.started_at}
+            pending={finish.isPending}
+            onFinish={onFinish}
+          />
+        )}
+        {count > 0 && (
+          <ExerciseStrip
+            items={session.exercises.map((x) => ({
+              id: x.id,
+              name: byId.get(x.exercise_id)?.name ?? `Übung ${x.exercise_id}`,
+              progress: exerciseProgress(x.sets, planned.get(x.exercise_id)?.target_sets),
+            }))}
+            selected={index}
+            onSelect={setFocusIndex}
+            onAdd={finished ? undefined : () => setPicker(true)}
+          />
+        )}
+      </div>
       <div className={finished ? 'pb-6' : 'pb-80'}>
         {session.cycle_name && (
           <p className="px-5 pb-2 text-sm font-semibold text-muted-foreground">
@@ -603,7 +633,10 @@ export function WorkoutPage() {
             nextName={next ? (byId.get(next.exercise_id)?.name ?? `Übung ${next.exercise_id}`) : null}
             exercise={byId.get(se.exercise_id)}
             restSec={plan?.target_rest_sec ?? defaultRest}
-            prevSets={plan?.last_sets.filter((x) => !x.is_warmup) ?? []}
+            prevSets={plan?.sets.filter((x) => !x.is_warmup) ?? []}
+            prevLabel={
+              previous.isPending ? ' ' : compareLabel(plan, previous.data?.plan_day_name)
+            }
             recordsBySet={recordsBySet}
             onRecords={(setId, recs) => setRecordsBySet((m) => ({ ...m, [setId]: recs }))}
             onRecordMoment={setMoment}
@@ -646,7 +679,10 @@ export function WorkoutPage() {
             { sessionId: id, data: { exercise_id: ex.id } },
             {
               onSuccess: async () => {
-                await refresh()
+                await Promise.all([
+                  refresh(),
+                  queryClient.invalidateQueries({ queryKey: getGetSessionPreviousQueryKey(id) }),
+                ])
                 // Neue Übung ans Ende der Session springen lassen
                 setFocusIndex(count)
               },

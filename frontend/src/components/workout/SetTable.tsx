@@ -41,9 +41,15 @@ export function SetTable({
   onSelect: (set: SetRead) => void
 }) {
   const scroller = useRef<HTMLDivElement>(null)
+  const activeRef = useRef<HTMLLIElement>(null)
+  // Kompakt: aktive Zeile unten ins Bild holen, darunter liegende Geisterzeilen bleiben scrollbar
   useEffect(() => {
     const el = scroller.current
-    if (el && compact) el.scrollTop = el.scrollHeight
+    if (!el || !compact) return
+    const row = activeRef.current
+    el.scrollTop = row
+      ? Math.max(0, row.offsetTop + row.offsetHeight - el.clientHeight)
+      : el.scrollHeight
   }, [sets.length, compact])
 
   let working = 0
@@ -51,6 +57,11 @@ export function SetTable({
     const number = s.is_warmup ? null : ++working
     return { s, number, prev: s.is_warmup ? undefined : prevSets[(number ?? 1) - 1] }
   })
+  // Geisterzeilen: noch ausstehende Sätze vom letzten Mal (nur in laufender Session)
+  const nextNumber = working + (active && !active.is_warmup ? 1 : 0)
+  const ghosts = active
+    ? prevSets.slice(nextNumber).map((prev, i) => ({ prev, number: nextNumber + i + 1 }))
+    : []
   const grid = 'grid grid-cols-[30px_1fr_1fr_86px] items-center gap-2'
 
   return (
@@ -65,7 +76,7 @@ export function SetTable({
       </div>
       <div
         ref={scroller}
-        className={compact ? 'max-h-[11.5rem] overflow-y-auto' : undefined}
+        className={compact ? 'relative max-h-[11.5rem] overflow-y-auto' : undefined}
         data-testid="set-table"
       >
         <ul>
@@ -109,7 +120,12 @@ export function SetTable({
             )
           })}
           {active && (
-            <li className="border-t pt-1" data-testid="active-row" aria-label="Nächster Satz">
+            <li
+              ref={activeRef}
+              className="border-t pt-1"
+              data-testid="active-row"
+              aria-label="Nächster Satz"
+            >
               <div
                 className={`${grid} rounded-[10px] border-2 border-dashed border-primary py-[5px] pl-1.5 pr-1.5`}
               >
@@ -128,6 +144,21 @@ export function SetTable({
               </div>
             </li>
           )}
+          {ghosts.map(({ prev, number }) => (
+            <li
+              key={`ghost-${number}`}
+              data-testid="ghost-row"
+              aria-label={`Satz ${number}, letztes Mal ${valueLabel(prev.reps, prev.weight_kg, loadType)}`}
+              className={`${grid} border-t py-[7px] opacity-50`}
+            >
+              <span className="font-display text-lg text-muted-foreground">{number}</span>
+              <span className="text-base font-medium tabular-nums text-muted-foreground">
+                {valueLabel(prev.reps, prev.weight_kg, loadType)}
+              </span>
+              <span className="font-display text-[21px] text-muted-foreground">–</span>
+              <span />
+            </li>
+          ))}
         </ul>
       </div>
     </div>

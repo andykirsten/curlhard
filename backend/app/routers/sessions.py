@@ -21,10 +21,12 @@ from app.models import (
 from app.repositories.common import get_owned, get_visible_exercise
 from app.repositories.sets import load_sets
 from app.schemas.sessions import (
+    PreviousExercise,
     SessionCreate,
     SessionExerciseCreate,
     SessionExerciseRead,
     SessionExerciseUpdate,
+    SessionPrevious,
     SessionRead,
     SessionSummary,
     SessionUpdate,
@@ -32,9 +34,10 @@ from app.schemas.sessions import (
     SetRead,
     SetUpdate,
 )
-from app.schemas.stats import CycleRef, TodayRead
+from app.schemas.stats import CycleRef, LastSet, TodayRead
 from app.services import cycles as cycle_service
 from app.services import stats
+from app.services.previous import PreviousSets, last_sets_for
 
 router = APIRouter(tags=["sessions"])
 
@@ -114,7 +117,9 @@ def today(user: CurrentUser, db: DbSession, weekday: int | None = None):
                     ExerciseNote.user_id == user.id, ExerciseNote.exercise_id == pe.exercise_id
                 )
             ).first()
-            last = _last_sets(db, user.id, pe.exercise_id)  # type: ignore[arg-type]
+            last = _last_set_dicts(
+                last_sets_for(db, user.id, pe.exercise_id, plan_day_id=d.id)  # type: ignore[arg-type]
+            )
             exercises.append(
                 {
                     "plan_exercise_id": pe.id,
@@ -154,28 +159,10 @@ def _cycle_ref(db: Session, user_id: int) -> dict | None:
     ).model_dump()
 
 
-def _last_sets(db: Session, user_id: int, exercise_id: int) -> list[dict]:
-    """Arbeitssätze der letzten Session, in der diese Übung geloggt wurde."""
-    last_se = db.exec(
-        select(SessionExercise.id)
-        .join(SetLog, SetLog.session_exercise_id == SessionExercise.id)  # type: ignore[arg-type]
-        .where(
-            SessionExercise.user_id == user_id,
-            SessionExercise.exercise_id == exercise_id,
-        )
-        .order_by(col(SetLog.completed_at).desc())
-        .limit(1)
-    ).first()
-    if last_se is None:
-        return []
-    sets = db.exec(
-        select(SetLog)
-        .where(SetLog.user_id == user_id, SetLog.session_exercise_id == last_se)
-        .order_by(SetLog.set_number, SetLog.id)
-    ).all()
+def _last_set_dicts(prev: PreviousSets) -> list[dict]:
     return [
         {"reps": s.reps, "weight_kg": s.weight_kg, "is_warmup": s.is_warmup, "rpe": s.rpe}
-        for s in sets
+        for s in prev.sets
     ]
 
 
@@ -269,6 +256,53 @@ def list_sessions(
 def get_session_detail(session_id: int, user: CurrentUser, db: DbSession):
     ws = get_owned(db, WorkoutSession, session_id, user.id, "Session")  # type: ignore[arg-type]
     return session_read(db, user.id, ws)  # type: ignore[arg-type]
+
+
+@router.get("/sessions/{session_id}/previous", response_model=SessionPrevious)
+def get_session_previous(session_id: int, user: CurrentUser, db: DbSession):
+    """Vergleichswerte je Übung: letztes Training desselben Plantags, sonst letzte Session."""
+    ws = get_owned(db, WorkoutSession, session_id, user.id, "Session")  # type: ignore[arg-type]
+    day = None
+    targets: dict[int, PlanExercise] = {}
+    if ws.plan_day_id is not None:
+        day = db.exec(
+            select(PlanDay).where(PlanDay.user_id == user.id, PlanDay.id == ws.plan_day_id)
+        ).first()
+        items = db.exec(
+            select(PlanExercise)
+            .where(PlanExercise.user_id == user.id, PlanExercise.plan_day_id == ws.plan_day_id)
+            .order_by(col(PlanExercise.position).desc(), col(PlanExercise.id).desc())
+        ).all()
+        # Bei doppelt eingeplanter Übung gewinnt die erste Position
+        targets = {pe.exercise_id: pe for pe in items}
+    exercise_ids = db.exec(
+        select(SessionExercise.exercise_id)
+        .where(SessionExercise.user_id == user.id, SessionExercise.session_id == ws.id)
+        .order_by(SessionExercise.position, SessionExercise.id)
+    ).all()
+    out: list[PreviousExercise] = []
+    for exercise_id in dict.fromkeys(exercise_ids):
+        prev = last_sets_for(
+            db,
+            user.id,  # type: ignore[arg-type]
+            exercise_id,
+            before=ws.started_at,
+            exclude_session_id=ws.id,
+            plan_day_id=ws.plan_day_id,
+        )
+        pe = targets.get(exercise_id)
+        out.append(
+            PreviousExercise(
+                exercise_id=exercise_id,
+                target_sets=pe.target_sets if pe else None,
+                target_rest_sec=pe.target_rest_sec if pe else None,
+                source_session_id=prev.session_id,
+                source_started_at=prev.started_at,
+                same_plan_day=prev.same_plan_day,
+                sets=[LastSet(**s) for s in _last_set_dicts(prev)],
+            )
+        )
+    return SessionPrevious(plan_day_name=day.name if day else None, exercises=out)
 
 
 @router.patch("/sessions/{session_id}", response_model=SessionRead)
