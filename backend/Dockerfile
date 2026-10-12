@@ -18,7 +18,8 @@ COPY app ./app
 COPY migrations ./migrations
 COPY seeds ./seeds
 COPY alembic.ini ./
-COPY entrypoint.sh ./
+# Ausführbar unabhängig vom Dateimodus im Checkout (Windows/Git ohne +x)
+COPY --chmod=755 entrypoint.sh ./
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 DATABASE_URL=sqlite:////data/curlhard.db
 USER curlhard
 EXPOSE 8000
