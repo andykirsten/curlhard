@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -89,6 +88,117 @@
   50% {
     opacity: 0.4;
     transform: scale(0.8);
+  }
+}
+
+/* Login-Emblem „Schockwelle“ (siehe LoginEmblem.tsx). --ch-hit färbt Welle und Kern beim Puls. */
+@keyframes chCore {
+  0% {
+    transform: scale(1);
+    border-color: hsl(var(--border));
+  }
+  8% {
+    transform: scale(0.86);
+    border-color: var(--ch-hit);
+  }
+  18% {
+    transform: scale(1.08);
+    border-color: var(--ch-hit);
+  }
+  40%,
+  100% {
+    transform: scale(1);
+    border-color: hsl(var(--border));
+  }
+}
+
+@keyframes chWave {
+  0% {
+    transform: scale(0.33);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  61%,
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes chEcho {
+  0%,
+  60% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  61% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Erfolg: letztes Echo läuft weit über den Screen hinaus */
+@keyframes chEchoOut {
+  0%,
+  60% {
+    transform: scale(1);
+    opacity: 0;
+  }
+  61% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(6);
+    opacity: 0;
+  }
+}
+
+@keyframes chRing {
+  0%,
+  58% {
+    transform: scale(1);
+  }
+  66% {
+    transform: scale(1.07);
+  }
+  78% {
+    transform: scale(0.985);
+  }
+  90%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+.ch-emblem {
+  --ch-hit: hsl(var(--primary));
+}
+
+.ch-emblem > * {
+  position: absolute;
+  border-radius: 50%;
+  box-sizing: border-box;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  animation-fill-mode: both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ch-emblem > * {
+    animation: none !important;
+  }
+
+  .ch-emblem > .ch-wave,
+  .ch-emblem > .ch-echo {
+    display: none;
   }
 }
 
