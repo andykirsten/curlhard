@@ -29,6 +29,14 @@ export interface AccountDelete {
   password: string;
 }
 
+export interface AppConfigRead {
+  kliment_mode: boolean;
+}
+
+export interface AppConfigUpdate {
+  kliment_mode: boolean;
+}
+
 export interface AuthorRead {
   id: number;
   display_name: string;
@@ -1644,6 +1652,195 @@ export const useDeleteInvite = <TError = ErrorType<HTTPValidationError>,
       > => {
       return useMutation(getDeleteInviteMutationOptions(options), queryClient);
     }
+
+export const getUpdateAppConfigUrl = () => {
+
+
+
+
+  return `/api/v1/admin/app-config`
+}
+
+/**
+ * @summary Update App Config
+ */
+export const updateAppConfig = async (appConfigUpdate: AppConfigUpdate, options?: Parameters<typeof customFetch>[1]): Promise<AppConfigRead> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<AppConfigRead>(getUpdateAppConfigUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(appConfigUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateAppConfigMutationKey = () => ['updateAppConfig'] as const;
+
+export const getUpdateAppConfigMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAppConfig>>, TError,UpdateAppConfigMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAppConfig>>, TError,UpdateAppConfigMutationVariables, TContext> => {
+
+const mutationKey = getUpdateAppConfigMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAppConfig>>, UpdateAppConfigMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateAppConfig(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAppConfigMutationResult = NonNullable<Awaited<ReturnType<typeof updateAppConfig>>>
+    export type UpdateAppConfigMutationBody = BodyType<AppConfigUpdate>
+    export type UpdateAppConfigMutationError = ErrorType<HTTPValidationError>
+    export type UpdateAppConfigMutationVariables = {data: BodyType<AppConfigUpdate>}
+
+    /**
+ * @summary Update App Config
+ */
+export const useUpdateAppConfig = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAppConfig>>, TError,UpdateAppConfigMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateAppConfig>>,
+        TError,
+        UpdateAppConfigMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUpdateAppConfigMutationOptions(options), queryClient);
+    }
+
+export const getGetAppConfigUrl = () => {
+
+
+
+
+  return `/api/v1/app-config`
+}
+
+/**
+ * @summary Get App Config
+ */
+export const getAppConfig = async ( options?: Parameters<typeof customFetch>[1]): Promise<AppConfigRead> => {
+
+  return customFetch<AppConfigRead>(getGetAppConfigUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAppConfigQueryKey = () => {
+    return [
+    `/api/v1/app-config`
+    ] as const;
+    }
+
+
+export const getGetAppConfigQueryOptions = <TData = Awaited<ReturnType<typeof getAppConfig>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAppConfig>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAppConfigQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAppConfig>>> = ({ signal }) => getAppConfig({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAppConfig>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAppConfigQueryResult = NonNullable<Awaited<ReturnType<typeof getAppConfig>>>
+export type GetAppConfigQueryError = ErrorType<unknown>
+
+
+export function useGetAppConfig<TData = Awaited<ReturnType<typeof getAppConfig>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAppConfig>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAppConfig>>,
+          TError,
+          Awaited<ReturnType<typeof getAppConfig>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAppConfig<TData = Awaited<ReturnType<typeof getAppConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAppConfig>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAppConfig>>,
+          TError,
+          Awaited<ReturnType<typeof getAppConfig>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAppConfig<TData = Awaited<ReturnType<typeof getAppConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAppConfig>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get App Config
+ */
+
+export function useGetAppConfig<TData = Awaited<ReturnType<typeof getAppConfig>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAppConfig>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAppConfigQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListMuscleGroupsUrl = () => {
 

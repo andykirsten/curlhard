@@ -322,7 +322,7 @@ export function SettingsPage() {
 
         {me.data?.role === 'admin' && (
           <Button asChild variant="secondary" className="w-full">
-            <Link to="/admin">Administration (Einladungen)</Link>
+            <Link to="/admin">Administration</Link>
           </Button>
         )}
         <Button

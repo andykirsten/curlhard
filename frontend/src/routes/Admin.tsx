@@ -1,10 +1,19 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useCreateInvite, useDeleteInvite, useListInvites, useMe } from '@/api'
+import {
+  getGetAppConfigQueryKey,
+  useCreateInvite,
+  useDeleteInvite,
+  useGetAppConfig,
+  useListInvites,
+  useMe,
+  useUpdateAppConfig,
+} from '@/api'
 import { EmptyState, PageHeader, Spinner } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
 import { formatDate } from '@/lib/dates'
 import { errorMessage } from '@/lib/query'
 
@@ -14,6 +23,8 @@ export function AdminPage() {
   const invites = useListInvites()
   const create = useCreateInvite()
   const remove = useDeleteInvite()
+  const appConfig = useGetAppConfig()
+  const updateConfig = useUpdateAppConfig()
   const [fresh, setFresh] = useState<string | null>(null)
 
   if (me.data && me.data.role !== 'admin') {
@@ -27,8 +38,34 @@ export function AdminPage() {
 
   return (
     <>
-      <PageHeader title="Einladungen" back="/settings" />
+      <PageHeader title="Administration" back="/settings" />
       <div className="space-y-4 p-4">
+        <Card>
+          <CardContent className="flex items-center justify-between gap-4">
+            <div className="text-sm">
+              <div className="font-medium">Kliment-Modus</div>
+              <div className="text-muted-foreground">
+                Während eines Workouts taucht ab und zu ein Kopf auf und feuert dich an.
+              </div>
+            </div>
+            <Switch
+              label="Kliment-Modus"
+              checked={appConfig.data?.kliment_mode ?? false}
+              disabled={!appConfig.data || updateConfig.isPending}
+              onCheckedChange={(checked) =>
+                updateConfig.mutate(
+                  { data: { kliment_mode: checked } },
+                  {
+                    onSuccess: () =>
+                      queryClient.invalidateQueries({ queryKey: getGetAppConfigQueryKey() }),
+                    onError: (e) => toast.error(errorMessage(e)),
+                  },
+                )
+              }
+            />
+          </CardContent>
+        </Card>
+        <h2 className="pt-2 text-sm font-semibold text-muted-foreground">Einladungen</h2>
         <Button
           className="w-full"
           disabled={create.isPending}

@@ -379,6 +379,68 @@
         }
       }
     },
+    "/api/v1/admin/app-config": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Update App Config",
+        "operationId": "update_app_config",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppConfigUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConfigRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/app-config": {
+      "get": {
+        "tags": [
+          "app-config"
+        ],
+        "summary": "Get App Config",
+        "operationId": "get_app_config",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConfigRead"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/muscle-groups": {
       "get": {
         "tags": [
@@ -3080,6 +3142,32 @@
           "password"
         ],
         "title": "AccountDelete"
+      },
+      "AppConfigRead": {
+        "properties": {
+          "kliment_mode": {
+            "type": "boolean",
+            "title": "Kliment Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kliment_mode"
+        ],
+        "title": "AppConfigRead"
+      },
+      "AppConfigUpdate": {
+        "properties": {
+          "kliment_mode": {
+            "type": "boolean",
+            "title": "Kliment Mode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kliment_mode"
+        ],
+        "title": "AppConfigUpdate"
       },
       "AuthorRead": {
         "properties": {

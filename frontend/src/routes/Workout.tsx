@@ -14,6 +14,7 @@ import {
   useDeleteSet,
   useExerciseSummary,
   useFinishSession,
+  useGetAppConfig,
   useGetNote,
   useGetSessionDetail,
   useGetSessionPrevious,
@@ -35,6 +36,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/input'
 import { Sheet } from '@/components/ui/sheet'
 import { ExerciseStrip } from '@/components/workout/ExerciseStrip'
+import { KlimentOverlay } from '@/components/workout/KlimentOverlay'
 import { InputDock } from '@/components/workout/InputDock'
 import { SetTable, type ActiveRow } from '@/components/workout/SetTable'
 import { VolumeBar } from '@/components/workout/VolumeBar'
@@ -535,6 +537,8 @@ export function WorkoutPage() {
   const remove = useDeleteSession()
   const endSession = useActiveSession((s) => s.endSession)
   const defaultRest = useSettings((s) => s.defaultRestSec)
+  const activeSessionId = useActiveSession((s) => s.sessionId)
+  const appConfig = useGetAppConfig({ query: { staleTime: 60_000 } })
   const [picker, setPicker] = useState(false)
   const [focusIndex, setFocusIndex] = useState(0)
   const [recordsBySet, setRecordsBySet] = useState<Record<number, number[]>>({})
@@ -585,6 +589,7 @@ export function WorkoutPage() {
 
   return (
     <>
+      {appConfig.data?.kliment_mode && !finished && activeSessionId === id && <KlimentOverlay />}
       {moment && <RecordMoment data={moment} onClose={() => setMoment(null)} />}
       {/* Kopf + Übungs-Leiste bleiben beim Scrollen sichtbar */}
       <div className="sticky top-0 z-10 bg-background/95 pb-2 backdrop-blur">
