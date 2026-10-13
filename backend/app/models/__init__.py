@@ -83,6 +83,13 @@ class InviteCode(Base, table=True):
     used_at: datetime | None = None
 
 
+class AppConfig(Base, table=True):
+    """Singleton-Tabelle (id=1) für globale Einstellungen, die Admins steuern."""
+
+    __tablename__ = "app_config"
+    kliment_mode: bool = Field(default=False, sa_column_kwargs={"server_default": sa.false()})
+
+
 class Plan(Base, table=True):
     __tablename__ = "plan"
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE", index=True)

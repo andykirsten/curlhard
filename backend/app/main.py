@@ -11,6 +11,7 @@ from app.errors import install_error_handlers
 from app.routers import (
     account,
     admin,
+    app_config,
     auth,
     cycles,
     exercises,
@@ -86,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for module in (
         auth,
         admin,
+        app_config,
         exercises,
         plans,
         public_plans,
