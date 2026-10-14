@@ -147,6 +147,8 @@ def test_all_user_endpoints_require_login(app, world):
         ("get", f"/users/{world['cycle']}/avatar", None),
         ("put", "/auth/me/avatar", None),
         ("delete", "/auth/me/avatar", None),
+        ("get", "/app-config", None),
+        ("put", "/admin/app-config", {"kliment_mode": True}),
     ]
     for method, path, body in _cases(world) + extra:
         kwargs = {"json": body} if body is not None else {}

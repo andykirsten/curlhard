@@ -3,6 +3,7 @@ import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Toaster } from 'sonner'
+import { unlockSpeech } from '@/lib/kliment'
 import { unlockAudio } from '@/lib/sound'
 import { queryClient } from '@/lib/query'
 import { applyTheme, useSettings } from '@/stores/settings'
@@ -14,6 +15,8 @@ applyTheme(useSettings.getState().theme)
 useSettings.subscribe((s) => applyTheme(s.theme))
 // iOS schaltet Web Audio erst nach der ersten Nutzergeste frei
 window.addEventListener('pointerdown', unlockAudio, { once: true })
+// Sprachausgabe (Kliment-Modus) braucht unter iOS ebenfalls eine Nutzergeste
+window.addEventListener('pointerdown', unlockSpeech, { once: true })
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
