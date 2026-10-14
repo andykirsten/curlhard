@@ -13,8 +13,10 @@ import {
 import { EmptyState, PageHeader, Spinner } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Segmented } from '@/components/ui/segmented'
 import { Switch } from '@/components/ui/switch'
 import { formatDate } from '@/lib/dates'
+import type { KlimentIntensity } from '@/lib/kliment'
 import { errorMessage } from '@/lib/query'
 
 export function AdminPage() {
@@ -55,6 +57,30 @@ export function AdminPage() {
               onCheckedChange={(checked) =>
                 updateConfig.mutate(
                   { data: { kliment_mode: checked } },
+                  {
+                    onSuccess: () =>
+                      queryClient.invalidateQueries({ queryKey: getGetAppConfigQueryKey() }),
+                    onError: (e) => toast.error(errorMessage(e)),
+                  },
+                )
+              }
+            />
+          </CardContent>
+          <CardContent className="space-y-2 pt-0">
+            <div id="kliment-intensity" className="text-sm font-medium">
+              Häufigkeit
+            </div>
+            <Segmented
+              aria-labelledby="kliment-intensity"
+              value={appConfig.data?.kliment_intensity ?? 'normal'}
+              options={[
+                { value: 'selten', label: 'Selten' },
+                { value: 'normal', label: 'Normal' },
+                { value: 'oft', label: 'Oft' },
+              ]}
+              onChange={(value) =>
+                updateConfig.mutate(
+                  { data: { kliment_intensity: value as KlimentIntensity } },
                   {
                     onSuccess: () =>
                       queryClient.invalidateQueries({ queryKey: getGetAppConfigQueryKey() }),

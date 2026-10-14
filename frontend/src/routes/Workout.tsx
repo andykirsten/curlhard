@@ -589,7 +589,7 @@ export function WorkoutPage() {
 
   return (
     <>
-      {appConfig.data?.kliment_mode && !finished && activeSessionId === id && <KlimentOverlay />}
+      {appConfig.data?.kliment_mode && !finished && activeSessionId === id && <KlimentOverlay intensity={appConfig.data.kliment_intensity} />}
       {moment && <RecordMoment data={moment} onClose={() => setMoment(null)} />}
       {/* Kopf + Übungs-Leiste bleiben beim Scrollen sichtbar */}
       <div className="sticky top-0 z-10 bg-background/95 pb-2 backdrop-blur">
