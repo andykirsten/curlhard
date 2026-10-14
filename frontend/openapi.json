@@ -3148,26 +3148,57 @@
           "kliment_mode": {
             "type": "boolean",
             "title": "Kliment Mode"
+          },
+          "kliment_intensity": {
+            "type": "string",
+            "enum": [
+              "selten",
+              "normal",
+              "oft"
+            ],
+            "title": "Kliment Intensity"
           }
         },
         "type": "object",
         "required": [
-          "kliment_mode"
+          "kliment_mode",
+          "kliment_intensity"
         ],
         "title": "AppConfigRead"
       },
       "AppConfigUpdate": {
         "properties": {
           "kliment_mode": {
-            "type": "boolean",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Kliment Mode"
+          },
+          "kliment_intensity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "selten",
+                  "normal",
+                  "oft"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kliment Intensity"
           }
         },
         "type": "object",
-        "required": [
-          "kliment_mode"
-        ],
-        "title": "AppConfigUpdate"
+        "title": "AppConfigUpdate",
+        "description": "Nicht gesetzte Felder bleiben unverändert."
       },
       "AuthorRead": {
         "properties": {

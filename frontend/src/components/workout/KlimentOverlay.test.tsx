@@ -31,7 +31,7 @@ afterEach(() => {
   Reflect.deleteProperty(window, 'speechSynthesis')
 })
 
-// rng = 0 -> 45 s Wartezeit, erste Phrase
+// erster Auftritt nach 10 s; rng = 0 -> danach 20 s Wartezeit, erste Phrase
 const rng = () => 0
 
 describe('KlimentOverlay', () => {
@@ -40,7 +40,7 @@ describe('KlimentOverlay', () => {
     expect(screen.queryByTestId('kliment-overlay')).toBeNull()
 
     act(() => {
-      vi.advanceTimersByTime(44_000)
+      vi.advanceTimersByTime(9_000)
     })
     expect(screen.queryByTestId('kliment-overlay')).toBeNull()
 
@@ -60,10 +60,18 @@ describe('KlimentOverlay', () => {
   it('shows up again after the next delay', () => {
     render(<KlimentOverlay rng={rng} />)
     act(() => {
-      vi.advanceTimersByTime(45_000 + 3_500 + 45_000)
+      vi.advanceTimersByTime(10_000 + 3_500 + 20_000)
     })
     expect(screen.getByTestId('kliment-overlay')).toBeInTheDocument()
     expect(speakMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('appears earlier with intensity "oft"', () => {
+    render(<KlimentOverlay rng={rng} intensity="oft" />)
+    act(() => {
+      vi.advanceTimersByTime(5_000)
+    })
+    expect(screen.getByTestId('kliment-overlay')).toBeInTheDocument()
   })
 
   it('does not fire while the document is hidden', () => {
@@ -80,7 +88,7 @@ describe('KlimentOverlay', () => {
   it('dismisses on tap', () => {
     render(<KlimentOverlay rng={rng} />)
     act(() => {
-      vi.advanceTimersByTime(45_000)
+      vi.advanceTimersByTime(10_000)
     })
     fireEvent.click(screen.getByRole('button', { name: 'Kliment ausblenden' }))
     expect(screen.queryByTestId('kliment-overlay')).toBeNull()
@@ -90,7 +98,7 @@ describe('KlimentOverlay', () => {
     Reflect.deleteProperty(window, 'speechSynthesis')
     const { unmount } = render(<KlimentOverlay rng={rng} />)
     act(() => {
-      vi.advanceTimersByTime(45_000)
+      vi.advanceTimersByTime(10_000)
     })
     expect(screen.getByRole('status')).toBeInTheDocument()
     unmount()

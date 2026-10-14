@@ -88,6 +88,7 @@ class AppConfig(Base, table=True):
 
     __tablename__ = "app_config"
     kliment_mode: bool = Field(default=False, sa_column_kwargs={"server_default": sa.false()})
+    kliment_intensity: str = Field(default="normal", sa_column_kwargs={"server_default": "normal"})
 
 
 class Plan(Base, table=True):

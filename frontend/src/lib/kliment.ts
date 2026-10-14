@@ -2,17 +2,31 @@
 export const PHRASES = ['Komm schon!', 'Los jetzt!', 'Noch drei!', 'Bwroup!'] as const
 export type Phrase = (typeof PHRASES)[number]
 
-const MIN_DELAY_MS = 45_000
-const MAX_DELAY_MS = 180_000
+export type KlimentIntensity = 'selten' | 'normal' | 'oft'
+
+/** Erster Auftritt sowie Spanne der Abstände danach, je Intensität (ms). */
+const TIMING: Record<KlimentIntensity, { first: number; min: number; max: number }> = {
+  selten: { first: 30_000, min: 60_000, max: 180_000 },
+  normal: { first: 10_000, min: 20_000, max: 60_000 },
+  oft: { first: 5_000, min: 8_000, max: 20_000 },
+}
+
+export function firstDelayMs(intensity: KlimentIntensity = 'normal'): number {
+  return TIMING[intensity].first
+}
 
 export function pickPhrase(rng: () => number = Math.random): Phrase {
   const i = Math.min(PHRASES.length - 1, Math.floor(rng() * PHRASES.length))
   return PHRASES[i] ?? PHRASES[0]
 }
 
-/** Wartezeit bis zum nächsten Auftritt: zufällig zwischen 45 und 180 Sekunden. */
-export function nextDelayMs(rng: () => number = Math.random): number {
-  return Math.round(MIN_DELAY_MS + rng() * (MAX_DELAY_MS - MIN_DELAY_MS))
+/** Wartezeit bis zum nächsten Auftritt: zufällig innerhalb der Spanne der Intensität. */
+export function nextDelayMs(
+  rng: () => number = Math.random,
+  intensity: KlimentIntensity = 'normal',
+): number {
+  const { min, max } = TIMING[intensity]
+  return Math.round(min + rng() * (max - min))
 }
 
 const MALE_HINTS =

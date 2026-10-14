@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { nextDelayMs, pickPhrase, speak } from '@/lib/kliment'
+import { firstDelayMs, nextDelayMs, pickPhrase, speak, type KlimentIntensity } from '@/lib/kliment'
 
 const VISIBLE_MS = 3000
 const SLIDE_MS = 300
@@ -74,9 +74,15 @@ function KlimentHead() {
 
 /**
  * Kliment-Modus: der Kopf erscheint in zufälligen Abständen am rechten Rand,
- * ruft eine Phrase und verschwindet nach ca. 3 s wieder. Tippen schließt ihn sofort.
+ * ruft eine Phrase und verschwindet nach ca. 3 s wieder (Takt je nach Intensität aus der Administration). Tippen schließt ihn sofort.
  */
-export function KlimentOverlay({ rng = Math.random }: { rng?: () => number }) {
+export function KlimentOverlay({
+  rng = Math.random,
+  intensity = 'normal',
+}: {
+  rng?: () => number
+  intensity?: KlimentIntensity
+}) {
   const [phrase, setPhrase] = useState<string | null>(null)
   const [entered, setEntered] = useState(false)
   const [dismissKey, setDismissKey] = useState(0)
@@ -92,7 +98,7 @@ export function KlimentOverlay({ rng = Math.random }: { rng?: () => number }) {
     }
     const reduced = prefersReducedMotion()
 
-    const schedule = () => later(fire, nextDelayMs(rng))
+    const schedule = (first = false) => later(fire, first ? firstDelayMs(intensity) : nextDelayMs(rng, intensity))
     const hide = () => {
       setEntered(false)
       later(
@@ -116,7 +122,7 @@ export function KlimentOverlay({ rng = Math.random }: { rng?: () => number }) {
       later(hide, VISIBLE_MS)
     }
 
-    schedule()
+    schedule(true)
     return () => {
       timers.forEach(clearTimeout)
       timers.clear()
@@ -129,7 +135,7 @@ export function KlimentOverlay({ rng = Math.random }: { rng?: () => number }) {
       }
     }
     // dismissKey startet den Ablauf nach einem Tipp neu
-  }, [rng, dismissKey])
+  }, [rng, intensity, dismissKey])
 
   if (phrase === null) return null
 

@@ -29,12 +29,35 @@ export interface AccountDelete {
   password: string;
 }
 
+export type AppConfigReadKlimentIntensity = typeof AppConfigReadKlimentIntensity[keyof typeof AppConfigReadKlimentIntensity];
+
+
+export const AppConfigReadKlimentIntensity = {
+  selten: 'selten',
+  normal: 'normal',
+  oft: 'oft',
+} as const;
+
 export interface AppConfigRead {
   kliment_mode: boolean;
+  kliment_intensity: AppConfigReadKlimentIntensity;
 }
 
+export type AppConfigUpdateKlimentIntensity = typeof AppConfigUpdateKlimentIntensity[keyof typeof AppConfigUpdateKlimentIntensity] | null;
+
+
+export const AppConfigUpdateKlimentIntensity = {
+  selten: 'selten',
+  normal: 'normal',
+  oft: 'oft',
+} as const;
+
+/**
+ * Nicht gesetzte Felder bleiben unverändert.
+ */
 export interface AppConfigUpdate {
-  kliment_mode: boolean;
+  kliment_mode?: boolean | null;
+  kliment_intensity?: AppConfigUpdateKlimentIntensity;
 }
 
 export interface AuthorRead {

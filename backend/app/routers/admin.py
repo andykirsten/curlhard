@@ -43,7 +43,10 @@ def delete_invite(invite_id: int, admin: AdminUser, db: DbSession):
 @router.put("/app-config", response_model=AppConfigRead)
 def update_app_config(body: AppConfigUpdate, admin: AdminUser, db: DbSession):
     config = load_app_config(db)
-    config.kliment_mode = body.kliment_mode
+    if body.kliment_mode is not None:
+        config.kliment_mode = body.kliment_mode
+    if body.kliment_intensity is not None:
+        config.kliment_intensity = body.kliment_intensity
     db.add(config)
     db.commit()
     db.refresh(config)

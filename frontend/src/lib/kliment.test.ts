@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { nextDelayMs, PHRASES, pickPhrase, speak, unlockSpeech } from './kliment'
+import { firstDelayMs, nextDelayMs, PHRASES, pickPhrase, speak, unlockSpeech } from './kliment'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -20,13 +20,13 @@ describe('pickPhrase', () => {
 })
 
 describe('nextDelayMs', () => {
-  it('is between 45 and 180 seconds', () => {
-    expect(nextDelayMs(() => 0)).toBe(45_000)
-    expect(nextDelayMs(() => 1)).toBe(180_000)
+  it('is between 20 and 60 seconds', () => {
+    expect(nextDelayMs(() => 0)).toBe(20_000)
+    expect(nextDelayMs(() => 1)).toBe(60_000)
     for (let i = 0; i < 50; i++) {
       const d = nextDelayMs()
-      expect(d).toBeGreaterThanOrEqual(45_000)
-      expect(d).toBeLessThanOrEqual(180_000)
+      expect(d).toBeGreaterThanOrEqual(20_000)
+      expect(d).toBeLessThanOrEqual(60_000)
     }
   })
 })
@@ -68,5 +68,17 @@ describe('speak', () => {
   it('does not throw without speech support', () => {
     expect(() => speak('Komm schon!')).not.toThrow()
     expect(() => unlockSpeech()).not.toThrow()
+  })
+})
+
+describe('intensity', () => {
+  it('scales the delays per level', () => {
+    expect(firstDelayMs()).toBe(10_000)
+    expect(firstDelayMs('selten')).toBe(30_000)
+    expect(firstDelayMs('oft')).toBe(5_000)
+    expect(nextDelayMs(() => 0, 'selten')).toBe(60_000)
+    expect(nextDelayMs(() => 1, 'selten')).toBe(180_000)
+    expect(nextDelayMs(() => 0, 'oft')).toBe(8_000)
+    expect(nextDelayMs(() => 1, 'oft')).toBe(20_000)
   })
 })
