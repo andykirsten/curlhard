@@ -13,6 +13,9 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Pixel 7'] } },
+    // Tablet (Sidebar, quer) und Desktop (Sidebar mit Beschriftung)
+    { name: 'tablet', use: { ...devices['Desktop Chrome'], viewport: { width: 1024, height: 768 } } },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     // WebKit (Safari-Engine) nur, wenn installiert: `npx playwright install webkit`
     ...(process.env.E2E_WEBKIT
       ? [{ name: 'webkit', use: { ...devices['iPhone 13'] } }]

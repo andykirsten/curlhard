@@ -30,11 +30,13 @@ export function Stepper({
     onChange(Math.max(min, next))
   }
   const dock = variant === 'dock'
-  const buttonClass = dock ? 'h-[52px] w-12 rounded-[14px]' : undefined
+  const buttonClass = dock ? 'h-11 w-full rounded-[14px] md:h-[52px] md:w-12' : undefined
   return (
     <div
       className={cn(
-        dock ? 'flex flex-col gap-1.5 rounded-[18px] bg-background px-2.5 pb-2.5 pt-2' : 'flex items-center gap-2',
+        dock
+          ? 'flex flex-col gap-1.5 rounded-[18px] bg-background px-2.5 pb-2.5 pt-2'
+          : 'flex items-center gap-2',
       )}
       role="group"
       aria-label={label}
@@ -47,7 +49,13 @@ export function Stepper({
           {shortLabel ?? label}
         </span>
       )}
-      <div className="flex items-center justify-between gap-1">
+      <div
+        className={cn(
+          dock
+            ? 'grid grid-cols-2 gap-1.5 md:flex md:items-center md:justify-between md:gap-1'
+            : 'flex items-center justify-between gap-1',
+        )}
+      >
         <Button
           type="button"
           variant="secondary"
@@ -63,7 +71,7 @@ export function Stepper({
           className={cn(
             'text-center tabular-nums',
             dock
-              ? 'min-w-0 flex-1 font-display text-[40px] leading-none'
+              ? 'order-first col-span-2 min-w-0 whitespace-nowrap font-display text-[40px] leading-none md:order-none md:col-span-1 md:flex-1'
               : 'min-w-[4.5rem] text-xl font-semibold',
           )}
         >

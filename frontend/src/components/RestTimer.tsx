@@ -5,6 +5,8 @@ import { beep } from '@/lib/sound'
 import { formatClock, isFinished, remainingSeconds } from '@/lib/timer'
 import { useActiveSession } from '@/stores/activeSession'
 
+const FINISHED_VISIBLE_MS = 8000
+
 /**
  * Pausen-Timer: rechnet mit gespeichertem Endzeitpunkt statt Zählern.
  * Nach Bildschirmsperre/Tab-Wechsel wird beim Zurückkehren neu berechnet.
@@ -49,17 +51,28 @@ export function RestTimer({
     }
   }, [finished, endsAt])
 
+  // „Pause vorbei“ schließt sich nach kurzer Zeit selbst (auch bei einem alten, wiederhergestellten Timer)
+  useEffect(() => {
+    if (!finished) return
+    const id = window.setTimeout(clear, FINISHED_VISIBLE_MS)
+    return () => window.clearTimeout(id)
+  }, [finished, endsAt, clear])
+
   if (endsAt == null) return null
   const remaining = remainingSeconds(endsAt, tick)
   const progress = total > 0 ? Math.min(100, ((total - remaining) / total) * 100) : 100
 
   // Im Fokusmodus (Workout) ersetzt das Dock das Eingabe-Dock am unteren Rand,
   // sonst sitzt es über der Tab-Leiste.
-  const position = `fixed inset-x-0 z-30 mx-auto w-full max-w-xl ${focus ? 'bottom-0' : 'bottom-16'}`
+  const position = `fixed inset-x-0 z-30 mx-auto w-full max-w-xl md:max-w-2xl ${focus ? 'bottom-0' : 'bottom-16 md:bottom-4 md:pl-20 lg:pl-60'}`
 
   if (finished) {
     return (
-      <div role="timer" aria-live="off" className={`${position} safe-bottom bg-primary text-primary-foreground`}>
+      <div
+        role="timer"
+        aria-live="off"
+        className={`${position} safe-bottom bg-primary text-primary-foreground`}
+      >
         <button
           type="button"
           aria-label="Timer schließen"
@@ -101,7 +114,10 @@ export function RestTimer({
             <div className="text-[11px] font-bold uppercase tracking-[0.16em] opacity-70">
               Pause · Ziel {formatClock(total)}
             </div>
-            <div className="font-display text-[50px] leading-none tabular-nums" data-testid="timer-clock">
+            <div
+              className="font-display text-[50px] leading-none tabular-nums"
+              data-testid="timer-clock"
+            >
               {formatClock(remaining)}
             </div>
           </div>
@@ -115,7 +131,11 @@ export function RestTimer({
           >
             +30 s
           </Button>
-          <Button type="button" className="h-[52px] rounded-2xl text-base font-bold" onClick={clear}>
+          <Button
+            type="button"
+            className="h-[52px] rounded-2xl text-base font-bold"
+            onClick={clear}
+          >
             Weiter
           </Button>
         </div>

@@ -13,6 +13,7 @@ import {
   useUploadAvatar,
 } from '@/api'
 import { PageHeader } from '@/components/Layout'
+import { KlimentPreviewButton } from '@/components/workout/KlimentOverlay'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -128,7 +129,7 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader title="Einstellungen" back="/" />
-      <div className="space-y-4 p-4">
+      <div className="mx-auto max-w-2xl space-y-4 p-4">
         <Section title="Profil">
           <div className="flex items-center gap-4">
             <Avatar name={me.data?.display_name ?? ''} src={me.data?.avatar_url} size="lg" />
@@ -244,6 +245,13 @@ export function SettingsPage() {
           </div>
         </Section>
 
+        <Section title="Kliment">
+          <p className="text-sm text-muted-foreground">
+            Kliment ruft dir einen zufälligen Spruch zu – auch wenn der Kliment-Modus nicht aktiv
+            ist.
+          </p>
+          <KlimentPreviewButton />
+        </Section>
         <Section title="Passwort ändern">
           <form
             className="space-y-3"

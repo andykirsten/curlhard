@@ -73,7 +73,7 @@ export function AmbientLayer({
       aria-hidden="true"
       data-testid="ambient-layer"
       data-profile={profile}
-      className={`ch-amb pointer-events-none z-0 overflow-hidden ${fixed ? 'fixed inset-0 mx-auto max-w-xl' : 'absolute inset-0'}`}
+      className={`ch-amb pointer-events-none z-0 overflow-hidden ${fixed ? 'fixed inset-0 mx-auto max-w-xl md:max-w-none' : 'absolute inset-0'}`}
     >
       {items.map((it) => (
         <Drifter

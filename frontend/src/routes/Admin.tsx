@@ -41,7 +41,7 @@ export function AdminPage() {
   return (
     <>
       <PageHeader title="Administration" back="/settings" />
-      <div className="space-y-4 p-4">
+      <div className="mx-auto max-w-2xl space-y-4 p-4">
         <Card>
           <CardContent className="flex items-center justify-between gap-4">
             <div className="text-sm">

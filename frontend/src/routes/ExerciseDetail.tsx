@@ -68,7 +68,7 @@ export function ExerciseDetailPage() {
       <PageHeader title={exercise.data.name} back="/exercises" />
       <div className="space-y-5 p-4">
         {!isTime && (
-          <section aria-label="Kennzahlen" className="grid grid-cols-2 gap-3">
+          <section aria-label="Kennzahlen" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat
               label="e1RM"
               value={kg(s?.e1rm)}
