@@ -1,4 +1,12 @@
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Annotated
+
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+
+# Wochentage 0 (Montag) bis 6 (Sonntag); doppelte Einträge werden entfernt, Ausgabe sortiert
+Weekdays = Annotated[
+    list[Annotated[int, Field(ge=0, le=6)]],
+    AfterValidator(lambda v: sorted(set(v))),
+]
 
 
 class PlanCreate(BaseModel):
@@ -14,12 +22,12 @@ class PlanUpdate(BaseModel):
 
 class PlanDayCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120)
-    weekday: int | None = Field(default=None, ge=0, le=6)
+    weekdays: Weekdays = []
 
 
 class PlanDayUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=120)
-    weekday: int | None = Field(default=None, ge=0, le=6)
+    weekdays: Weekdays | None = None
 
 
 class PlanExerciseCreate(BaseModel):
@@ -61,7 +69,7 @@ class PlanDayRead(BaseModel):
     id: int
     plan_id: int
     name: str
-    weekday: int | None
+    weekdays: list[int]
     position: int
     exercises: list[PlanExerciseRead] = []
 
@@ -84,7 +92,7 @@ class AuthorRead(BaseModel):
 
 class PublicPlanDaySummary(BaseModel):
     name: str
-    weekday: int | None
+    weekdays: list[int]
     exercise_count: int
 
 

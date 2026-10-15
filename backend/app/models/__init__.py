@@ -116,7 +116,11 @@ class PlanDay(Base, table=True):
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
     plan_id: int = Field(foreign_key="plan.id", ondelete="CASCADE", index=True)
     name: str
-    weekday: int | None = None
+    # Wochentage (0 = Montag … 6 = Sonntag), an denen der Tag trainiert wird; leer = frei wählbar
+    weekdays: list[int] = Field(
+        default_factory=list,
+        sa_column=sa.Column(sa.JSON, nullable=False, server_default="[]"),
+    )
     position: int = 0
 
 

@@ -13,7 +13,7 @@ describe('buildExamplePlan', () => {
     ])
     expect(plan.map((d) => d.name)).toEqual(['Push', 'Beine'])
     expect(plan[0]?.exerciseIds).toEqual([1, 2])
-    expect(plan[0]?.weekday).toBe(0)
+    expect(plan[0]?.weekdays).toEqual([0])
   })
 
   it('returns nothing for an empty catalog', () => {

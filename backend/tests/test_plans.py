@@ -3,7 +3,7 @@ API = "/api/v1"
 
 def _plan_with_day(c, catalog):
     plan = c.post(f"{API}/plans", json={"name": "PPL"}).json()
-    day = c.post(f"{API}/plans/{plan['id']}/days", json={"name": "Push", "weekday": 0}).json()
+    day = c.post(f"{API}/plans/{plan['id']}/days", json={"name": "Push", "weekdays": [0]}).json()
     pe = c.post(
         f"{API}/plan-days/{day['id']}/exercises",
         json={"exercise_id": catalog["bench"]["id"], "target_sets": 4, "target_rest_sec": 120},
@@ -32,7 +32,7 @@ def test_plan_structure_and_positions(alice, catalog):
     ).json()
     assert (pe["position"], second["position"]) == (0, 1)
     full = alice.get(f"{API}/plans/{plan['id']}").json()
-    assert full["days"][0]["weekday"] == 0
+    assert full["days"][0]["weekdays"] == [0]
     assert [e["id"] for e in full["days"][0]["exercises"]] == [pe["id"], second["id"]]
     assert full["days"][0]["exercises"][0]["target_rest_sec"] == 120
 
@@ -53,10 +53,14 @@ def test_reorder_exercises_and_days(alice, catalog):
 
 def test_update_and_validation(alice, catalog):
     plan, day, pe = _plan_with_day(alice, catalog)
-    r = alice.patch(f"{API}/plan-days/{day['id']}", json={"weekday": 9})
+    r = alice.patch(f"{API}/plan-days/{day['id']}", json={"weekdays": [1, 9]})
     assert r.status_code == 422
-    r = alice.patch(f"{API}/plan-days/{day['id']}", json={"weekday": None})
-    assert r.json()["weekday"] is None
+    r = alice.patch(f"{API}/plan-days/{day['id']}", json={"weekdays": [4, 0, 2, 4]})
+    assert r.json()["weekdays"] == [0, 2, 4]
+    r = alice.patch(f"{API}/plan-days/{day['id']}", json={"name": "Ganzkörper"})
+    assert r.json()["weekdays"] == [0, 2, 4]
+    r = alice.patch(f"{API}/plan-days/{day['id']}", json={"weekdays": []})
+    assert r.json()["weekdays"] == []
     r = alice.patch(f"{API}/plan-exercises/{pe['id']}", json={"target_reps_min": 20})
     assert r.status_code == 422
     r = alice.patch(

@@ -132,7 +132,7 @@ export interface CycleUpdate {
 export interface DayRef {
   id: number;
   name: string;
-  weekday: number | null;
+  weekdays: number[];
 }
 
 export type ExerciseCreateLoadType = typeof ExerciseCreateLoadType[keyof typeof ExerciseCreateLoadType];
@@ -326,7 +326,11 @@ export interface PlanDayCreate {
      * @maxLength 120
      */
   name: string;
-  weekday?: number | null;
+  /**
+     * @items.minimum 0
+     * @items.maximum 6
+     */
+  weekdays?: number[];
 }
 
 export interface PlanExerciseRead {
@@ -345,14 +349,14 @@ export interface PlanDayRead {
   id: number;
   plan_id: number;
   name: string;
-  weekday: number | null;
+  weekdays: number[];
   position: number;
   exercises: PlanExerciseRead[];
 }
 
 export interface PlanDayUpdate {
   name?: string | null;
-  weekday?: number | null;
+  weekdays?: number[] | null;
 }
 
 export interface PlanExerciseCreate {
@@ -424,7 +428,7 @@ export interface PreviousExercise {
 
 export interface PublicPlanDaySummary {
   name: string;
-  weekday: number | null;
+  weekdays: number[];
   exercise_count: number;
 }
 
@@ -619,7 +623,7 @@ export interface TodayExercise {
 export interface TodayDay {
   id: number;
   name: string;
-  weekday: number | null;
+  weekdays: number[];
   exercises: TodayExercise[];
 }
 

@@ -17,8 +17,12 @@ export function apiWeekday(d: Date = new Date()): number {
   return (d.getDay() + 6) % 7
 }
 
-export function weekdayLabel(weekday: number | null | undefined): string {
-  return weekday == null ? 'Frei wählbar' : (WEEKDAYS[weekday] ?? '')
+/** „Montag“ (bzw. „Mo“ mit `short`), „Mo, Mi, Fr“, ab fünf Tagen „5×/Woche“; leer = frei wählbar. */
+export function weekdaysLabel(weekdays: readonly number[], short = false): string {
+  if (weekdays.length === 0) return 'Frei wählbar'
+  if (weekdays.length === 1) return (short ? WEEKDAYS_SHORT : WEEKDAYS)[weekdays[0]!] ?? ''
+  if (weekdays.length >= 5) return `${weekdays.length}×/Woche`
+  return weekdays.map((w) => WEEKDAYS_SHORT[w]).join(', ')
 }
 
 // Das Backend liefert ISO 8601 in UTC; Anzeige in lokaler Zeit.

@@ -65,7 +65,7 @@ def _day_summaries(db: Session, plan: Plan) -> list[PublicPlanDaySummary]:
     return [
         PublicPlanDaySummary(
             name=d.name,
-            weekday=d.weekday,
+            weekdays=d.weekdays,
             exercise_count=counts.get(d.id, 0),  # type: ignore[arg-type]
         )
         for d in days

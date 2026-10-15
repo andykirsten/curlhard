@@ -20,7 +20,9 @@ def shared(alice, catalog):
         },
     ).json()
     plan = alice.post(f"{API}/plans", json={"name": "Push Alice", "description": "Brust"}).json()
-    day = alice.post(f"{API}/plans/{plan['id']}/days", json={"name": "Brust", "weekday": 1}).json()
+    day = alice.post(
+        f"{API}/plans/{plan['id']}/days", json={"name": "Brust", "weekdays": [1]}
+    ).json()
     alice.post(
         f"{API}/plan-days/{day['id']}/exercises",
         json={"exercise_id": catalog["bench"]["id"], "target_sets": 4},
@@ -40,7 +42,7 @@ def test_toggle_then_listed_for_others_not_for_author(alice, bob, shared):
     assert [i["name"] for i in items] == ["Push Alice"]
     assert items[0]["author"]["display_name"] == "alice"
     assert items[0]["day_count"] == 1 and items[0]["exercise_count"] == 2
-    assert items[0]["days"] == [{"name": "Brust", "weekday": 1, "exercise_count": 2}]
+    assert items[0]["days"] == [{"name": "Brust", "weekdays": [1], "exercise_count": 2}]
     assert alice.get(f"{API}/public-plans").json() == []
 
 
@@ -146,6 +148,4 @@ def test_exercise_count_counts_only_this_plan(alice, bob, shared):
     items = {i["name"]: i for i in bob.get(f"{API}/public-plans").json()}
     assert items["Push Alice"]["exercise_count"] == 2
     assert items["Zweiter Plan"]["exercise_count"] == 1
-    assert items["Zweiter Plan"]["days"] == [
-        {"name": "Beine", "weekday": None, "exercise_count": 1}
-    ]
+    assert items["Zweiter Plan"]["days"] == [{"name": "Beine", "weekdays": [], "exercise_count": 1}]

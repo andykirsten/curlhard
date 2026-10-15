@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { apiWeekday, durationLabel, formatShortDate, parseApiDate, weekdayLabel } from './dates'
+import { apiWeekday, durationLabel, formatShortDate, parseApiDate, weekdaysLabel } from './dates'
 
 describe('dates', () => {
   it('maps JS weekdays to API weekdays (Mo=0)', () => {
@@ -8,8 +8,11 @@ describe('dates', () => {
   })
 
   it('labels weekdays', () => {
-    expect(weekdayLabel(0)).toBe('Montag')
-    expect(weekdayLabel(null)).toBe('Frei wählbar')
+    expect(weekdaysLabel([0])).toBe('Montag')
+    expect(weekdaysLabel([0], true)).toBe('Mo')
+    expect(weekdaysLabel([0, 2, 4])).toBe('Mo, Mi, Fr')
+    expect(weekdaysLabel([0, 1, 2, 3, 4])).toBe('5×/Woche')
+    expect(weekdaysLabel([])).toBe('Frei wählbar')
   })
 
   it('treats API timestamps without zone as UTC', () => {

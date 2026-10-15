@@ -6,7 +6,7 @@ import { WeekStrip } from './WeekStrip'
 
 const WEEK = buildWeek(
   new Date(2026, 9, 12, 9),
-  planByWeekday([{ id: 1, name: 'Ganzkörper B', weekday: 2 }]),
+  planByWeekday([{ id: 1, name: 'Ganzkörper B', weekdays: [2] }]),
   false,
 )
 

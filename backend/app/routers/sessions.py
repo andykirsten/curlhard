@@ -101,7 +101,7 @@ def today(user: CurrentUser, db: DbSession, weekday: int | None = None):
         .where(PlanDay.user_id == user.id, PlanDay.plan_id == plan.id)
         .order_by(PlanDay.position, PlanDay.id)
     ).all()
-    day = next((d for d in days if d.weekday == wd), None)
+    day = next((d for d in days if wd in d.weekdays), None)
 
     def day_payload(d: PlanDay) -> dict:
         items = db.exec(
@@ -135,13 +135,13 @@ def today(user: CurrentUser, db: DbSession, weekday: int | None = None):
                     "last_sets": last,
                 }
             )
-        return {"id": d.id, "name": d.name, "weekday": d.weekday, "exercises": exercises}
+        return {"id": d.id, "name": d.name, "weekdays": d.weekdays, "exercises": exercises}
 
     return {
         "plan": {"id": plan.id, "name": plan.name},
         "day": day_payload(day) if day else None,
         "other_days": [
-            {"id": d.id, "name": d.name, "weekday": d.weekday} for d in days if d is not day
+            {"id": d.id, "name": d.name, "weekdays": d.weekdays} for d in days if d is not day
         ],
         "cycle": cycle,
     }

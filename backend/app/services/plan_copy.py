@@ -31,7 +31,7 @@ def clone_plan(
             user_id=target_user_id,  # type: ignore[arg-type]
             plan_id=copy.id,  # type: ignore[arg-type]
             name=day.name,
-            weekday=day.weekday,
+            weekdays=list(day.weekdays),
             position=day.position,
         )
         db.add(new_day)

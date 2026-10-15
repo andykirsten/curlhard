@@ -3544,23 +3544,19 @@
             "type": "string",
             "title": "Name"
           },
-          "weekday": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weekday"
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Weekdays"
           }
         },
         "type": "object",
         "required": [
           "id",
           "name",
-          "weekday"
+          "weekdays"
         ],
         "title": "DayRef"
       },
@@ -4250,18 +4246,15 @@
             "minLength": 1,
             "title": "Name"
           },
-          "weekday": {
-            "anyOf": [
-              {
-                "type": "integer",
-                "maximum": 6.0,
-                "minimum": 0.0
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weekday"
+          "weekdays": {
+            "items": {
+              "type": "integer",
+              "maximum": 6.0,
+              "minimum": 0.0
+            },
+            "type": "array",
+            "title": "Weekdays",
+            "default": []
           }
         },
         "type": "object",
@@ -4284,16 +4277,12 @@
             "type": "string",
             "title": "Name"
           },
-          "weekday": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weekday"
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Weekdays"
           },
           "position": {
             "type": "integer",
@@ -4313,7 +4302,7 @@
           "id",
           "plan_id",
           "name",
-          "weekday",
+          "weekdays",
           "position",
           "exercises"
         ],
@@ -4334,18 +4323,21 @@
             ],
             "title": "Name"
           },
-          "weekday": {
+          "weekdays": {
             "anyOf": [
               {
-                "type": "integer",
-                "maximum": 6.0,
-                "minimum": 0.0
+                "items": {
+                  "type": "integer",
+                  "maximum": 6.0,
+                  "minimum": 0.0
+                },
+                "type": "array"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Weekday"
+            "title": "Weekdays"
           }
         },
         "type": "object",
@@ -4716,16 +4708,12 @@
             "type": "string",
             "title": "Name"
           },
-          "weekday": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weekday"
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Weekdays"
           },
           "exercise_count": {
             "type": "integer",
@@ -4735,7 +4723,7 @@
         "type": "object",
         "required": [
           "name",
-          "weekday",
+          "weekdays",
           "exercise_count"
         ],
         "title": "PublicPlanDaySummary"
@@ -5697,16 +5685,12 @@
             "type": "string",
             "title": "Name"
           },
-          "weekday": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Weekday"
+          "weekdays": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Weekdays"
           },
           "exercises": {
             "items": {
@@ -5720,7 +5704,7 @@
         "required": [
           "id",
           "name",
-          "weekday",
+          "weekdays",
           "exercises"
         ],
         "title": "TodayDay"

@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button'
 import { Badge, Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Segmented } from '@/components/ui/segmented'
-import { weekdayLabel } from '@/lib/dates'
+import { weekdaysLabel } from '@/lib/dates'
 import { buildExamplePlan } from '@/lib/examplePlan'
 import { errorMessage } from '@/lib/query'
 
@@ -50,7 +50,7 @@ export function PlansPage() {
       if (days.length === 0) return toast.error('Der Übungskatalog ist leer.')
       const plan = await createPlan({ name: 'Beispielplan (Push/Pull/Beine)' })
       for (const d of days) {
-        const day = await createDay(plan.id, { name: d.name, weekday: d.weekday })
+        const day = await createDay(plan.id, { name: d.name, weekdays: d.weekdays })
         for (const exerciseId of d.exerciseIds) {
           await addPlanExercise(day.id, { exercise_id: exerciseId })
         }
@@ -158,7 +158,7 @@ export function PlansPage() {
                 }
               />
             )}
-            <ul className="space-y-3">
+            <ul className="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 xl:grid-cols-3">
               {data?.map((plan) => (
                 <li key={plan.id}>
                   <Card>
@@ -180,10 +180,7 @@ export function PlansPage() {
                         {plan.days.length === 0
                           ? 'Keine Trainingstage'
                           : plan.days
-                              .map(
-                                (d) =>
-                                  `${d.name} (${d.weekday == null ? weekdayLabel(null) : weekdayLabel(d.weekday).slice(0, 2)})`,
-                              )
+                              .map((d) => `${d.name} (${weekdaysLabel(d.weekdays, true)})`)
                               .join(' · ')}
                       </p>
                       <div className="flex flex-wrap gap-2">
@@ -256,7 +253,7 @@ function PublicPlanList({
     )
   }
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-3 md:grid md:grid-cols-2 md:gap-3 md:space-y-0 xl:grid-cols-3">
       {plans?.map((plan) => (
         <li key={plan.id}>
           <Card>

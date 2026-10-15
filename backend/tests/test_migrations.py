@@ -83,5 +83,7 @@ def test_0002_keeps_workout_data(tmp_path):
     con = sqlite3.connect(db_path)
     try:
         assert con.execute("PRAGMA foreign_key_check").fetchall() == []
+        # 0005: einzelner Wochentag wird zur Liste
+        assert con.execute("SELECT weekdays FROM plan_day WHERE id = 1").fetchone() == ("[0]",)
     finally:
         con.close()

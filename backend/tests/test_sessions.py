@@ -9,7 +9,9 @@ def iso(days_ago: int) -> str:
 
 def _active_plan(c, catalog, weekday=0):
     plan = c.post(f"{API}/plans", json={"name": "PPL"}).json()
-    day = c.post(f"{API}/plans/{plan['id']}/days", json={"name": "Push", "weekday": weekday}).json()
+    day = c.post(
+        f"{API}/plans/{plan['id']}/days", json={"name": "Push", "weekdays": [weekday]}
+    ).json()
     c.post(
         f"{API}/plan-days/{day['id']}/exercises",
         json={"exercise_id": catalog["bench"]["id"], "target_sets": 3, "target_rest_sec": 120},
@@ -25,7 +27,9 @@ def test_today_without_plan(alice):
 
 def test_today_picks_weekday_and_includes_last_values(alice, catalog):
     plan, day = _active_plan(alice, catalog, weekday=2)
-    other = alice.post(f"{API}/plans/{plan['id']}/days", json={"name": "Pull", "weekday": 4}).json()
+    other = alice.post(
+        f"{API}/plans/{plan['id']}/days", json={"name": "Pull", "weekdays": [4]}
+    ).json()
     alice.put(f"{API}/exercises/{catalog['bench']['id']}/note", json={"note": "Sitz 4"})
     s = alice.post(f"{API}/sessions", json={"plan_day_id": day["id"]}).json()
     se = s["exercises"][0]
@@ -43,6 +47,19 @@ def test_today_picks_weekday_and_includes_last_values(alice, catalog):
     assert [(x["reps"], x["weight_kg"]) for x in bench["last_sets"]] == [(8, 80), (10, 40)]
     assert body["day"]["exercises"][1]["last_sets"] == []
     assert alice.get(f"{API}/today", params={"weekday": 6}).json()["day"] is None
+
+
+def test_today_day_on_several_weekdays_shares_last_values(alice, catalog):
+    plan, day = _active_plan(alice, catalog)
+    alice.patch(f"{API}/plan-days/{day['id']}", json={"weekdays": [0, 2, 4]})
+    for wd in (0, 2, 4):
+        assert alice.get(f"{API}/today", params={"weekday": wd}).json()["day"]["id"] == day["id"]
+    assert alice.get(f"{API}/today", params={"weekday": 1}).json()["day"] is None
+    # Einheit am Mittwoch: am Freitag erscheinen genau diese Werte als „Letztes Mal“
+    s = alice.post(f"{API}/sessions", json={"plan_day_id": day["id"], "started_at": iso(2)})
+    _log(alice, s.json(), catalog["bench"]["id"], (6, 90))
+    bench = alice.get(f"{API}/today", params={"weekday": 4}).json()["day"]["exercises"][0]
+    assert [(x["reps"], x["weight_kg"]) for x in bench["last_sets"]] == [(6, 90)]
 
 
 def test_start_session_copies_plan_exercises(alice, catalog):
