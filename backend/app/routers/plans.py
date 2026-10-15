@@ -38,7 +38,7 @@ def _day_reads(db: Session, user_id: int, days: list[PlanDay]) -> list[PlanDayRe
             id=d.id,  # type: ignore[arg-type]
             plan_id=d.plan_id,
             name=d.name,
-            weekday=d.weekday,
+            weekdays=d.weekdays,
             position=d.position,
             exercises=by_day[d.id],  # type: ignore[index]
         )
@@ -178,7 +178,7 @@ def create_day(plan_id: int, body: PlanDayCreate, user: CurrentUser, db: DbSessi
         user_id=user.id,  # type: ignore[arg-type]
         plan_id=plan.id,  # type: ignore[arg-type]
         name=body.name,
-        weekday=body.weekday,
+        weekdays=body.weekdays,
         position=_next_position(db, PlanDay, user.id, plan_id=plan.id),  # type: ignore[arg-type]
     )
     db.add(day)
@@ -193,8 +193,8 @@ def update_day(day_id: int, body: PlanDayUpdate, user: CurrentUser, db: DbSessio
     data = body.model_dump(exclude_unset=True)
     if data.get("name") is not None:
         day.name = data["name"]
-    if "weekday" in data:
-        day.weekday = data["weekday"]
+    if "weekdays" in data:
+        day.weekdays = data["weekdays"] or []
     db.add(day)
     db.commit()
     db.refresh(day)

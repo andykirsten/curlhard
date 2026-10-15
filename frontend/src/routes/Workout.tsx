@@ -2,7 +2,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from '@tanstack/react-router'
 import { MoreHorizontal, Plus } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   getGetSessionDetailQueryKey,
@@ -326,6 +326,20 @@ function ExerciseFocus({
 
   // Wischen wechselt die Übung (horizontal, > 60 px)
   const swipe = useRef<{ x: number; y: number } | null>(null)
+
+  // Desktop/Tablet mit Tastatur: ←/→ wechseln die Übung (nicht in Eingabefeldern, Tab-Leiste oder Dialogen)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+      const t = e.target as HTMLElement | null
+      if (t?.closest('input, textarea, select, [contenteditable], [role="tablist"]')) return
+      if (document.querySelector('[role="dialog"]')) return
+      onGo(e.key === 'ArrowRight' ? 1 : -1)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onGo])
 
   const volumeToday = exerciseVolume(se.sets, loadType)
   const volumeLast = exerciseVolume(prevSets, loadType)

@@ -88,14 +88,14 @@ class TodayExercise(BaseModel):
 class TodayDay(BaseModel):
     id: int
     name: str
-    weekday: int | None
+    weekdays: list[int]
     exercises: list[TodayExercise]
 
 
 class DayRef(BaseModel):
     id: int
     name: str
-    weekday: int | None
+    weekdays: list[int]
 
 
 class PlanRef(BaseModel):

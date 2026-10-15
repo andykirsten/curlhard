@@ -7,6 +7,7 @@ import { RestTimer } from '@/components/RestTimer'
 import { Avatar } from '@/components/ui/avatar'
 import { ambientProfileFor, useRestRunning } from '@/lib/ambient'
 import { cn } from '@/lib/utils'
+import { useIsTabletUp } from '@/lib/useMediaQuery'
 
 const NAV = [
   { to: '/', label: 'Heute', icon: Home },
@@ -40,21 +41,90 @@ export function BottomNav() {
   )
 }
 
+/** Ab Tablet: feste Seitenleiste (Icons, ab Desktop mit Beschriftung) statt Tab-Leiste. */
+export function Sidebar() {
+  const me = useMe()
+  const item =
+    'flex h-12 items-center justify-center gap-3 rounded-lg font-display text-sm uppercase tracking-wider text-muted-foreground hover:bg-accent hover:text-foreground lg:justify-start lg:px-4'
+  return (
+    <nav
+      aria-label="Hauptnavigation"
+      className="fixed inset-y-0 left-0 z-20 flex w-20 flex-col gap-1 border-r bg-background p-3 lg:w-60"
+    >
+      <p className="mb-4 hidden px-4 pt-2 font-display text-2xl uppercase text-primary lg:block">
+        Curlhard
+      </p>
+      <ul className="flex flex-col gap-1">
+        {NAV.map(({ to, label, icon: Icon }) => (
+          <li key={to}>
+            <Link
+              to={to}
+              aria-label={label}
+              title={label}
+              activeOptions={{ exact: to === '/' }}
+              className={item}
+              activeProps={{ className: 'bg-accent text-primary' }}
+            >
+              <Icon className="h-5 w-5 shrink-0" aria-hidden />
+              <span className="hidden lg:inline">{label}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <Link
+        to="/settings"
+        aria-label="Profil und Einstellungen"
+        title="Profil und Einstellungen"
+        className={cn(item, 'mt-auto')}
+      >
+        <Avatar name={me.data?.display_name ?? ''} src={me.data?.avatar_url} size="sm" />
+        <span className="hidden truncate lg:inline">{me.data?.display_name ?? 'Einstellungen'}</span>
+      </Link>
+    </nav>
+  )
+}
+
 export function AppLayout() {
   // Workout läuft im Fokusmodus ohne Tab-Leiste (Design „Curlhard Redesign A“)
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const focus = pathname.startsWith('/workout/')
   // Im Workout wird der Hintergrund lebendiger, solange der Pausen-Timer läuft
   const restRunning = useRestRunning()
+  // Nur eine Navigation im DOM: Sidebar ab Tablet, sonst Tab-Leiste
+  const tabletUp = useIsTabletUp()
+  const sidebar = tabletUp && !focus
   return (
-    <div className={cn('mx-auto min-h-screen max-w-xl', focus ? 'pb-24' : 'pb-40')}>
-      <AmbientLayer fixed profile={ambientProfileFor(pathname, restRunning)} />
-      {/* positioniert, damit der Inhalt über der Hintergrund-Ebene liegt */}
-      <div className="relative">
-        <Outlet />
+    <div
+      className={cn(
+        'min-h-screen',
+        focus ? 'pb-24' : 'pb-40 md:pb-12',
+        sidebar && 'md:pl-20 lg:pl-60',
+      )}
+    >
+      <a
+        href="#inhalt"
+        className="sr-only z-50 rounded-md bg-primary px-3 py-2 text-primary-foreground focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+        onClick={(e) => {
+          e.preventDefault()
+          document.getElementById('inhalt')?.focus()
+        }}
+      >
+        Zum Inhalt springen
+      </a>
+      <div
+        className={cn(
+          'mx-auto',
+          focus ? 'max-w-xl md:max-w-2xl' : 'max-w-xl md:max-w-3xl lg:max-w-5xl xl:max-w-6xl',
+        )}
+      >
+        <AmbientLayer fixed profile={ambientProfileFor(pathname, restRunning)} />
+        {/* positioniert, damit der Inhalt über der Hintergrund-Ebene liegt */}
+        <div id="inhalt" tabIndex={-1} className="relative outline-none">
+          <Outlet />
+        </div>
       </div>
-      <RestTimer focus={focus} />
-      {!focus && <BottomNav />}
+      {focus && <RestTimer focus />}
+      {!focus && (sidebar ? <Sidebar /> : <BottomNav />)}
     </div>
   )
 }

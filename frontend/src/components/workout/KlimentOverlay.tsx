@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react'
-import { firstDelayMs, nextDelayMs, pickPhrase, speak, type KlimentIntensity } from '@/lib/kliment'
+import {
+  firstDelayMs,
+  nextDelayMs,
+  pickPhrase,
+  speak,
+  unlockSpeech,
+  type KlimentIntensity,
+} from '@/lib/kliment'
 
 const VISIBLE_MS = 3000
 const SLIDE_MS = 300
@@ -9,7 +16,7 @@ function prefersReducedMotion(): boolean {
 }
 
 /** Freundlicher Cartoon-Kopf: gebräunte Haut, kurze dunkle Haare, volle Lippen, Dreitagebart. */
-function KlimentHead() {
+export function KlimentHead() {
   const stubble: [number, number][] = [
     [32, 62],
     [37, 66],
@@ -98,7 +105,8 @@ export function KlimentOverlay({
     }
     const reduced = prefersReducedMotion()
 
-    const schedule = (first = false) => later(fire, first ? firstDelayMs(intensity) : nextDelayMs(rng, intensity))
+    const schedule = (first = false) =>
+      later(fire, first ? firstDelayMs(intensity) : nextDelayMs(rng, intensity))
     const hide = () => {
       setEntered(false)
       later(
@@ -142,7 +150,7 @@ export function KlimentOverlay({
   const reduced = prefersReducedMotion()
   return (
     <div
-      className="pointer-events-none fixed bottom-60 right-0 z-30 flex items-end"
+      className="pointer-events-none fixed bottom-72 right-[max(0px,calc((100vw-36rem)/2))] z-30 md:right-[max(0px,calc((100vw-42rem)/2))] flex items-end"
       data-testid="kliment-overlay"
     >
       <div
@@ -175,5 +183,54 @@ export function KlimentOverlay({
         </button>
       </div>
     </div>
+  )
+}
+
+/** Profil-Button: zeigt Kliment einmalig mit zufälliger Phrase – unabhängig vom globalen Kliment-Modus. */
+export function KlimentPreviewButton({ rng = Math.random }: { rng?: () => number }) {
+  const [phrase, setPhrase] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (phrase === null) return
+    const id = setTimeout(() => setPhrase(null), VISIBLE_MS)
+    return () => clearTimeout(id)
+  }, [phrase])
+
+  return (
+    <>
+      <button
+        type="button"
+        className="inline-flex h-9 items-center justify-center rounded-md bg-secondary px-3 text-sm font-semibold text-secondary-foreground"
+        onClick={() => {
+          unlockSpeech()
+          const p = pickPhrase(rng)
+          setPhrase(p)
+          speak(p)
+        }}
+      >
+        Kliment anzeigen
+      </button>
+      {phrase !== null && (
+        <div
+          className="pointer-events-none fixed bottom-24 right-0 z-50 flex items-end"
+          data-testid="kliment-preview"
+        >
+          <div
+            role="status"
+            className="mb-10 mr-[-6px] rounded-2xl rounded-br-sm border bg-card px-3 py-1.5 text-sm font-bold text-card-foreground shadow-md"
+          >
+            {phrase}
+          </div>
+          <button
+            type="button"
+            aria-label="Kliment ausblenden"
+            className="pointer-events-auto touch-manipulation"
+            onClick={() => setPhrase(null)}
+          >
+            <KlimentHead />
+          </button>
+        </div>
+      )}
+    </>
   )
 }

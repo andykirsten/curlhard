@@ -58,11 +58,11 @@ export function buildWeek(
 
 /** Ordnet Plantage ihren Wochentagen zu; bei mehreren Tagen pro Wochentag gewinnt der erste. */
 export function planByWeekday(
-  days: readonly { id: number; name: string; weekday: number | null }[],
+  days: readonly { id: number; name: string; weekdays: readonly number[] }[],
 ): PlanByWeekday {
   const out: PlanByWeekday = {}
   for (const d of days) {
-    if (d.weekday != null && out[d.weekday] == null) out[d.weekday] = { id: d.id, name: d.name }
+    for (const w of d.weekdays) if (out[w] == null) out[w] = { id: d.id, name: d.name }
   }
   return out
 }

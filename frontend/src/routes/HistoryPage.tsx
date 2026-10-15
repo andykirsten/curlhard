@@ -52,7 +52,7 @@ export function HistoryPage() {
             hint="Sobald du dein erstes Workout beendest, erscheint es hier."
           />
         )}
-        <ul className="space-y-2">
+        <ul className="space-y-2 md:grid md:grid-cols-2 md:gap-3 md:space-y-0">
           {data?.map((s) => (
             <li key={s.id}>
               <Link to="/workout/$sessionId" params={{ sessionId: String(s.id) }}>

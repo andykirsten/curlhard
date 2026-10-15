@@ -2,20 +2,20 @@ import type { ExerciseRead } from '@/api'
 
 export interface ExampleDay {
   name: string
-  weekday: number
+  weekdays: number[]
   exerciseIds: number[]
 }
 
-const TEMPLATE: { name: string; weekday: number; exercises: string[] }[] = [
+const TEMPLATE: { name: string; weekdays: number[]; exercises: string[] }[] = [
   {
     name: 'Push',
-    weekday: 0,
+    weekdays: [0],
     exercises: ['Bankdrücken', 'Schulterdrücken', 'Trizepsdrücken am Kabel'],
   },
-  { name: 'Pull', weekday: 2, exercises: ['Klimmzüge', 'Langhantelrudern', 'Langhantelcurls'] },
+  { name: 'Pull', weekdays: [2], exercises: ['Klimmzüge', 'Langhantelrudern', 'Langhantelcurls'] },
   {
     name: 'Beine',
-    weekday: 4,
+    weekdays: [4],
     exercises: ['Kniebeuge', 'Rumänisches Kreuzheben', 'Wadenheben stehend'],
   },
 ]
@@ -25,7 +25,7 @@ export function buildExamplePlan(catalog: ExerciseRead[]): ExampleDay[] {
   const byName = new Map(catalog.map((e) => [e.name, e.id]))
   return TEMPLATE.map((day) => ({
     name: day.name,
-    weekday: day.weekday,
+    weekdays: day.weekdays,
     exerciseIds: day.exercises.flatMap((n) => {
       const id = byName.get(n)
       return id == null ? [] : [id]

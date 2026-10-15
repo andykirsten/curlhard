@@ -76,9 +76,9 @@ export function ExerciseStrip({ items, selected, onSelect, onAdd }: ExerciseStri
   return (
     <div
       ref={scroller}
-      className="no-scrollbar relative flex snap-x snap-proximity scroll-px-5 gap-[5px] overflow-x-auto px-5 py-1"
+      className="no-scrollbar relative flex snap-x snap-proximity scroll-px-5 gap-[5px] overflow-x-auto px-5 py-1 md:flex-wrap md:overflow-x-visible"
     >
-      <div role="tablist" aria-label="Übungen" className="flex gap-[5px]" onKeyDown={onKeyDown}>
+      <div role="tablist" aria-label="Übungen" className="flex gap-[5px] md:flex-wrap" onKeyDown={onKeyDown}>
         {items.map((item, i) => {
           const isSelected = i === selected
           const { status } = item.progress

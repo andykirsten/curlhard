@@ -10,7 +10,7 @@ def world(alice, catalog):
     """Daten von Alice über alle Ressourcen-Typen hinweg."""
     private = alice.post(f"{API}/exercises", json={"name": "Alices Geheimübung"}).json()
     plan = alice.post(f"{API}/plans", json={"name": "Alice-Plan"}).json()
-    day = alice.post(f"{API}/plans/{plan['id']}/days", json={"name": "Tag", "weekday": 1}).json()
+    day = alice.post(f"{API}/plans/{plan['id']}/days", json={"name": "Tag", "weekdays": [1]}).json()
     pe = alice.post(
         f"{API}/plan-days/{day['id']}/exercises", json={"exercise_id": private["id"]}
     ).json()

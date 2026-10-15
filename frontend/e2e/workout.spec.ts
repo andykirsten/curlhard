@@ -40,8 +40,10 @@ test('Einladung → Registrierung → Plan → Workout loggen → Fortschritt', 
   await page.getByRole('link', { name: 'Push Pull' }).click()
   await page.getByLabel('Name des neuen Trainingstags').fill('Push')
   await page.getByRole('button', { name: 'Trainingstag hinzufügen' }).click()
-  const weekdayIndex = (new Date().getDay() + 6) % 7
-  await page.getByLabel('Wochentag').selectOption(String(weekdayIndex))
+  const today = new Date().toLocaleDateString('de-DE', { weekday: 'long' })
+  const chip = page.getByRole('group', { name: 'Wochentage' }).getByRole('button', { name: today })
+  await chip.click()
+  await expect(chip).toHaveAttribute('aria-pressed', 'true')
 
   for (const name of ['Bankdrücken', 'Schulterdrücken']) {
     await page.getByRole('button', { name: 'Übung hinzufügen' }).click()

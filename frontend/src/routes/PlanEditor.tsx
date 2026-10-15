@@ -38,10 +38,11 @@ import {
   type PlanRead,
 } from '@/api'
 import { ExercisePicker } from '@/components/ExercisePicker'
+import { WeekdayChips } from '@/components/WeekdayChips'
 import { EmptyState, PageHeader, Spinner } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input, Select } from '@/components/ui/input'
+import { Input } from '@/components/ui/input'
 import { Sheet } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -167,7 +168,7 @@ function WeekGrid({ days }: { days: PlanDayRead[] }) {
       </p>
       <div className="grid grid-cols-7 gap-1">
         {WEEKDAYS_SHORT.map((short, i) => {
-          const day = days.find((d) => d.weekday === i)
+          const day = days.find((d) => d.weekdays.includes(i))
           return (
             <button
               key={short}
@@ -218,6 +219,20 @@ function DayCard({
   const refresh = () => queryClient.invalidateQueries()
   const fail = (e: unknown) => toast.error(errorMessage(e))
   const ids = day.exercises.map((e) => e.id)
+  // Wochentage, die schon ein anderer Trainingstag dieses Plans belegt (erster gewinnt)
+  const taken: Partial<Record<number, string>> = {}
+  for (const d of plan.days) {
+    if (d.id !== day.id) for (const w of d.weekdays) taken[w] ??= d.name
+  }
+
+  const setWeekdays = (weekdays: number[]) => {
+    // Optimistisch setzen, damit Chips und Wochenplan sofort reagieren
+    queryClient.setQueryData<PlanRead>(key, {
+      ...plan,
+      days: plan.days.map((d) => (d.id === day.id ? { ...d, weekdays } : d)),
+    })
+    updateDay.mutate({ dayId: day.id, data: { weekdays } }, { onSettled: refresh, onError: fail })
+  }
 
   const onDragEnd = (e: DragEndEvent) => {
     if (!e.over || e.active.id === e.over.id) return
@@ -262,28 +277,7 @@ function DayCard({
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
-        <Select
-          aria-label="Wochentag"
-          value={day.weekday ?? ''}
-          onChange={(e) =>
-            updateDay.mutate(
-              {
-                dayId: day.id,
-                data: {
-                  weekday: e.target.value === '' ? null : Number(e.target.value),
-                },
-              },
-              { onSuccess: refresh, onError: fail },
-            )
-          }
-        >
-          <option value="">Frei wählbar</option>
-          {WEEKDAYS.map((w, i) => (
-            <option key={w} value={i}>
-              {w}
-            </option>
-          ))}
-        </Select>
+        <WeekdayChips value={day.weekdays} taken={taken} onChange={setWeekdays} />
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>

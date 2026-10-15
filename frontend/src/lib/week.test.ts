@@ -13,17 +13,23 @@ import {
 // Montag, 12. Oktober 2026, kurz nach Mitternacht (lokale Zeit)
 const MONDAY = new Date(2026, 9, 12, 0, 30)
 const PLAN = planByWeekday([
-  { id: 1, name: 'Ganzkörper B', weekday: 2 },
-  { id: 2, name: 'Ganzkörper C', weekday: 4 },
-  { id: 3, name: 'Ganzkörper A', weekday: 6 },
-  { id: 4, name: 'Zusatz', weekday: 2 },
-  { id: 5, name: 'Frei', weekday: null },
+  { id: 1, name: 'Ganzkörper B', weekdays: [2] },
+  { id: 2, name: 'Ganzkörper C', weekdays: [4] },
+  { id: 3, name: 'Ganzkörper A', weekdays: [6] },
+  { id: 4, name: 'Zusatz', weekdays: [2] },
+  { id: 5, name: 'Frei', weekdays: [] },
 ])
 
 describe('week', () => {
   it('maps plan days to weekdays, first one wins', () => {
     expect(PLAN[2]?.id).toBe(1)
     expect(Object.keys(PLAN)).toEqual(['2', '4', '6'])
+  })
+
+  it('maps one plan day to several weekdays', () => {
+    const plan = planByWeekday([{ id: 7, name: 'Ganzkörper', weekdays: [0, 2, 4] }])
+    expect(Object.keys(plan)).toEqual(['0', '2', '4'])
+    expect(plan[4]?.id).toBe(7)
   })
 
   it('builds exactly 7 days starting at local start of today', () => {

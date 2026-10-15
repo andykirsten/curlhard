@@ -7,7 +7,7 @@ import { EmptyState, PageHeader, Spinner } from '@/components/Layout'
 import { Avatar } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { weekdayLabel } from '@/lib/dates'
+import { weekdaysLabel } from '@/lib/dates'
 import { errorMessage } from '@/lib/query'
 
 /** Nur-Lese-Ansicht eines öffentlichen Plans von anderen Nutzern. */
@@ -80,7 +80,7 @@ export function PublicPlanPage() {
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-semibold">{day.name}</p>
                     <span className="font-display text-xs uppercase tracking-wider text-muted-foreground">
-                      {day.weekday == null ? weekdayLabel(null) : weekdayLabel(day.weekday)}
+                      {weekdaysLabel(day.weekdays)}
                     </span>
                   </div>
                   {day.exercises.length === 0 ? (

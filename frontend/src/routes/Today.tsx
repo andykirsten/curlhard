@@ -34,7 +34,7 @@ function OnlineCard() {
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Gerade online
         </p>
-        <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+        <ul className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0">
           {users.map((u) => (
             <li key={u.id} className="flex w-16 shrink-0 flex-col items-center gap-1 text-center">
               <Avatar name={u.display_name} src={u.avatar_url} size="md" />
@@ -139,15 +139,15 @@ export function TodayPage() {
   return (
     <>
       <PageHeader title="Heute" profile />
-      <div className="space-y-4 p-4">
+      <div className="space-y-4 p-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
         {data?.cycle && (
-          <span className="inline-flex w-fit items-center rounded-full bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
+          <span className="inline-flex w-fit items-center lg:col-span-2 rounded-full bg-secondary px-3 py-1 text-sm font-semibold text-secondary-foreground">
             {`${data.cycle.name} · Woche ${cycleWeek(data.cycle.start_date)}`}
           </span>
         )}
 
         {activeId != null && (
-          <Card className="border-primary">
+          <Card className="border-primary lg:col-span-2">
             <CardContent className="flex items-center justify-between">
               <span className="font-medium">Ein Training läuft noch</span>
               <Button asChild size="sm">
@@ -177,7 +177,7 @@ export function TodayPage() {
         )}
 
         {data?.plan && (
-          <section aria-label="Tagesauswahl">
+          <section aria-label="Tagesauswahl" className="lg:col-span-2">
             <p className="text-[13px] font-bold uppercase leading-none tracking-[0.18em] text-primary">
               {dayKicker(selDay)}
             </p>

@@ -62,7 +62,8 @@ export function SetTable({
   const ghosts = active
     ? prevSets.slice(nextNumber).map((prev, i) => ({ prev, number: nextNumber + i + 1 }))
     : []
-  const grid = 'grid grid-cols-[30px_1fr_1fr_86px] items-center gap-2'
+  const grid =
+    'grid grid-cols-[26px_minmax(0,1fr)_minmax(0,1.2fr)_56px] items-center gap-2 sm:grid-cols-[30px_1fr_1fr_86px]'
 
   return (
     <div>
@@ -97,7 +98,7 @@ export function SetTable({
                   <span className="text-base font-medium tabular-nums text-muted-foreground">
                     {prev ? valueLabel(prev.reps, prev.weight_kg, loadType) : '–'}
                   </span>
-                  <span className="font-display text-[21px] tabular-nums">
+                  <span className="whitespace-nowrap font-display text-[19px] tabular-nums sm:text-[21px]">
                     {valueLabel(s.reps, s.weight_kg, loadType)}
                   </span>
                   <span
@@ -133,9 +134,11 @@ export function SetTable({
                   {active.is_warmup ? 'W' : active.number}
                 </span>
                 <span className="text-base font-medium tabular-nums text-muted-foreground">
-                  {active.prev ? valueLabel(active.prev.reps, active.prev.weight_kg, loadType) : '–'}
+                  {active.prev
+                    ? valueLabel(active.prev.reps, active.prev.weight_kg, loadType)
+                    : '–'}
                 </span>
-                <span className="font-display text-[21px] tabular-nums text-primary">
+                <span className="whitespace-nowrap font-display text-[19px] tabular-nums sm:text-[21px] text-primary">
                   {valueLabel(active.reps, active.weight_kg, loadType)}
                 </span>
                 <span className="text-right text-[13px] font-extrabold uppercase text-primary">
