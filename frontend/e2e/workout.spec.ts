@@ -87,9 +87,11 @@ test('Einladung → Registrierung → Plan → Workout loggen → Fortschritt', 
   await page.getByRole('textbox', { name: 'Gewicht (kg)' }).fill('22,5')
   await page.getByRole('textbox', { name: 'Wiederholungen' }).fill('6')
   await expect(page.getByTestId('active-row')).toContainText('6 × 22,5 kg')
+  // Optionale Anstrengung: RPE 8 (2 Wdh. in Reserve)
+  await page.getByRole('radio', { name: /^RPE 8/ }).click()
   await page.getByRole('button', { name: /Satz abhaken/ }).click()
   await expect(doneRows).toHaveCount(2)
-  await expect(doneRows.nth(1)).toContainText('6 × 22,5 kg')
+  await expect(doneRows.nth(1)).toContainText('6 × 22,5 kg@8')
 
   // Pause beenden, damit das Eingabe-Dock wieder frei ist
   await page.getByRole('button', { name: 'Weiter', exact: true }).click()

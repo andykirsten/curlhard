@@ -126,6 +126,8 @@ f(r) = \begin{cases} 1 + \frac{r}{30} & r \le 15 \\ 1{,}5 \cdot \frac{M(r)}{M(15
 
 e1RM = w · f(r). Werte bis 15 Wiederholungen bleiben damit unverändert. Beispiel: 40 kg × 20 Wdh. ergibt 64,0 kg (Epley: 66,7 kg), 40 kg × 30 Wdh. ergibt 70,3 kg (Epley: 80 kg). Sätze mit mehr als 30 Wiederholungen fließen nicht in die Schätzung ein (Ausdauerbereich, kaum Aussagekraft fürs Maximum); im Volumen und in den tatsächlichen Bestwerten zählen sie weiterhin.
 
+**RPE-Korrektur:** Ist für einen Satz eine Anstrengung (RPE) erfasst, zählt die Reserve bis zum Muskelversagen (RIR = 10 − RPE) zu den Wiederholungen: r' = r + min(10 − RPE, 4), höchstens 30; e1RM = w · f(r'). Ohne RPE gilt der Satz als bis zum Versagen. Die Reserve ist auf 4 Wdh. begrenzt, weil man sie darunter (RPE < 6) kaum verlässlich einschätzt. Beispiel: 80 kg × 8 @ RPE 8 ergibt wie 80 kg × 10 ein e1RM von 106,7 kg. Im Workout ist RPE optional (6–10) im Eingabe-Dock und beim Bearbeiten eines Satzes wählbar und erscheint in der Satztabelle als „@8“.
+
 **Geschätztes nRM** für n = 5, 8, 13, abgeleitet aus dem e1RM der Session (Umkehrung derselben Kurve):
 
 ```latex

@@ -21,6 +21,11 @@ describe('e1rm', () => {
     expect(e1rm(40, 30)).toBeCloseTo(70.27, 1)
     expect(e1rm(40, 30)).toBeLessThan(40 * 2)
   })
+  it('adds reps in reserve from RPE', () => {
+    expect(e1rm(80, 8, 8)).toBeCloseTo(80 * (1 + 10 / 30))
+    expect(e1rm(80, 8, 10)).toBeCloseTo(e1rm(80, 8))
+    expect(e1rm(80, 8, 3)).toBeCloseTo(80 * (1 + 12 / 30))
+  })
 })
 
 describe('exerciseVolume / volumePercent', () => {

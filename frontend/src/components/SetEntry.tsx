@@ -1,5 +1,6 @@
 import { Check } from 'lucide-react'
 import { useState } from 'react'
+import { RpePicker } from '@/components/RpePicker'
 import { Stepper } from '@/components/Stepper'
 import { Button } from '@/components/ui/button'
 import { formatWeight } from '@/lib/weight'
@@ -8,6 +9,8 @@ export interface SetValues {
   reps: number
   weight_kg: number
   is_warmup: boolean
+  /** Anstrengung 6–10, null = nicht angegeben (bei Aufwärm- und Zeitsätzen immer null) */
+  rpe: number | null
 }
 
 interface SetEntryProps {
@@ -17,6 +20,7 @@ interface SetEntryProps {
   loadType?: string
   disabled?: boolean
   initialWarmup?: boolean
+  initialRpe?: number | null
   submitLabel?: string
   onSubmit: (values: SetValues) => void
 }
@@ -29,12 +33,14 @@ export function SetEntry({
   loadType = 'weight',
   disabled,
   initialWarmup = false,
+  initialRpe = null,
   submitLabel = 'Satz abhaken',
   onSubmit,
 }: SetEntryProps) {
   const [reps, setReps] = useState(initialReps)
   const [weight, setWeight] = useState(initialWeight)
   const [warmup, setWarmup] = useState(initialWarmup)
+  const [rpe, setRpe] = useState<number | null>(initialRpe)
   const isTime = loadType === 'time'
 
   return (
@@ -57,6 +63,7 @@ export function SetEntry({
           />
         )}
       </div>
+      {!isTime && !warmup && <RpePicker value={rpe} onChange={setRpe} />}
       <div className="flex items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -76,6 +83,7 @@ export function SetEntry({
               reps,
               weight_kg: isTime ? 0 : weight,
               is_warmup: warmup,
+              rpe: isTime || warmup ? null : rpe,
             })
           }
         >

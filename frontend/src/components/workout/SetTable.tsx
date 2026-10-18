@@ -100,6 +100,14 @@ export function SetTable({
                   </span>
                   <span className="whitespace-nowrap font-display text-[19px] tabular-nums sm:text-[21px]">
                     {valueLabel(s.reps, s.weight_kg, loadType)}
+                    {s.rpe != null && (
+                      <span
+                        className="ml-1 font-sans text-xs font-bold text-muted-foreground"
+                        aria-label={`RPE ${s.rpe}`}
+                      >
+                        @{s.rpe}
+                      </span>
+                    )}
                   </span>
                   <span
                     className={`text-right text-[13px] font-extrabold tabular-nums ${

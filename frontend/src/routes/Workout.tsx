@@ -250,11 +250,13 @@ function ExerciseFocus({
   const [weight, setWeight] = useState(start.weight)
   const [reps, setReps] = useState(start.reps)
   const [warmup, setWarmup] = useState(start.warmup)
+  const [rpe, setRpe] = useState<number | null>(null)
   if (seed !== seedKey) {
     setSeed(seedKey)
     setWeight(start.weight)
     setReps(start.reps)
     setWarmup(start.warmup)
+    setRpe(null)
   }
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: key })
@@ -283,7 +285,6 @@ function ExerciseFocus({
                         exercise_id: se.exercise_id,
                         set_number: e.sets.length + 1,
                         rest_sec: null,
-                        rpe: null,
                         completed_at: new Date().toISOString(),
                         records: [],
                         ...v,
@@ -302,7 +303,7 @@ function ExerciseFocus({
       {
         onSuccess: (saved) => {
           if (saved.records.length > 0) {
-            const e1 = e1rm(v.weight_kg, v.reps)
+            const e1 = e1rm(v.weight_kg, v.reps, v.rpe)
             onRecords(saved.id, saved.records)
             onRecordMoment({
               exercise: name,
@@ -520,11 +521,13 @@ function ExerciseFocus({
           weight={weight}
           reps={reps}
           warmup={warmup}
+          rpe={rpe}
           weightStep={weightStep}
           loadType={loadType}
           onWeight={setWeight}
           onReps={setReps}
           onWarmup={setWarmup}
+          onRpe={setRpe}
           plates={
             bar != null && plates.length > 0
               ? {
@@ -538,6 +541,7 @@ function ExerciseFocus({
               reps,
               weight_kg: loadType === 'time' ? 0 : weight,
               is_warmup: warmup,
+              rpe: loadType === 'time' || warmup ? null : rpe,
             })
           }
         />
@@ -639,6 +643,7 @@ function ExerciseFocus({
               initialReps={editing.reps}
               initialWeight={editing.weight_kg}
               initialWarmup={editing.is_warmup}
+              initialRpe={editing.rpe}
               weightStep={weightStep}
               loadType={loadType}
               submitLabel="Speichern"

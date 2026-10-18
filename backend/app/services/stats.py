@@ -14,6 +14,8 @@ RECORD_TARGETS = (1, 5, 8, 13)
 EPLEY_MAX_REPS = 15
 MAX_REPS_FOR_ESTIMATE = 30
 PROFILE_MAX_REPS = 15
+# Reserve aus dem RPE (RIR = 10 − RPE); unter RPE 6 schätzt man die Reserve kaum verlässlich
+MAX_RIR = 4
 
 
 @dataclass(frozen=True)
@@ -39,12 +41,12 @@ def effective_load(load_type: str, weight_kg: float, body_weight_kg: float | Non
     return None  # time
 
 
-def _mayhew(reps: int) -> float:
+def _mayhew(reps: float) -> float:
     """Mayhew et al. (1992): 1RM = w / (0,522 + 0,419 · e^(−0,055 · r))."""
     return 1 / (0.522 + 0.419 * math.exp(-0.055 * reps))
 
 
-def rm_factor(reps: int) -> float:
+def rm_factor(reps: float) -> float:
     """Verhältnis 1RM / Last bei `reps` Wiederholungen.
 
     Bis 15 Wdh. Epley (1 + r/30). Epley wächst linear und überschätzt hohe
@@ -58,10 +60,19 @@ def rm_factor(reps: int) -> float:
     return (1 + EPLEY_MAX_REPS / 30) * _mayhew(reps) / _mayhew(EPLEY_MAX_REPS)
 
 
-def e1rm(load: float, reps: int) -> float | None:
+def reps_to_failure(reps: int, rpe: float | None) -> float:
+    """Wiederholungen bis zum Muskelversagen: Wdh. + Reserve (10 − RPE, höchstens MAX_RIR),
+    begrenzt auf MAX_REPS_FOR_ESTIMATE. Ohne RPE gilt der Satz als bis zum Versagen."""
+    if rpe is None:
+        return reps
+    rir = min(max(10 - rpe, 0.0), MAX_RIR)
+    return min(reps + rir, MAX_REPS_FOR_ESTIMATE)
+
+
+def e1rm(load: float, reps: int, rpe: float | None = None) -> float | None:
     if reps < 1 or reps > MAX_REPS_FOR_ESTIMATE or load <= 0:
         return None
-    return load * rm_factor(reps)
+    return load * rm_factor(reps_to_failure(reps, rpe))
 
 
 def nrm(e1: float, n: int) -> float:
@@ -111,7 +122,7 @@ def session_metrics(
         volume += s.reps * load
         if top_load_set is None or (load, s.reps) > (top_load_set[0], top_load_set[1].reps):
             top_load_set = (load, s)
-        est = e1rm(load, s.reps)
+        est = e1rm(load, s.reps, s.rpe)
         if est is not None and (best_e1 is None or est > best_e1):
             best_e1, best_set, best_load = est, s, load
     if best_set is None and top_load_set is not None:
@@ -300,7 +311,7 @@ def pr_events(sets: list[SetData], load_type: str, bw: float | None) -> list[dic
         load = effective_load(load_type, s.weight_kg, bw)
         found: list[dict] = []
         if load is not None and load > 0:
-            est = e1rm(load, s.reps)
+            est = e1rm(load, s.reps, s.rpe)
             if est is not None:
                 if best_e1 is not None and est > best_e1:
                     found.append({"kind": "e1rm", "reps": None, "value": round(est, 2)})

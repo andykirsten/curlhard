@@ -30,7 +30,12 @@ describe('SetEntry keyboard input', () => {
     await userEvent.tab()
     expect(weight).toHaveValue('72,5')
     await userEvent.click(screen.getByRole('button', { name: /Satz abhaken/ }))
-    expect(onSubmit).toHaveBeenCalledWith({ reps: 12, weight_kg: 72.5, is_warmup: false })
+    expect(onSubmit).toHaveBeenCalledWith({
+      reps: 12,
+      weight_kg: 72.5,
+      is_warmup: false,
+      rpe: null,
+    })
   })
 })
 
@@ -47,6 +52,7 @@ describe('SetEntry', () => {
       reps: 7,
       weight_kg: 62.5,
       is_warmup: false,
+      rpe: null,
     })
   })
 
@@ -59,6 +65,24 @@ describe('SetEntry', () => {
       reps: 10,
       weight_kg: 20,
       is_warmup: true,
+      rpe: null,
+    })
+  })
+
+  it('submits an optional RPE, tapping again clears it', async () => {
+    const onSubmit = vi.fn()
+    render(<SetEntry initialReps={5} initialWeight={100} weightStep={2.5} onSubmit={onSubmit} />)
+    await userEvent.click(screen.getByRole('radio', { name: /RPE 8/ }))
+    expect(screen.getByRole('radio', { name: /RPE 8/ })).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(screen.getByRole('button', { name: /Satz abhaken/ }))
+    expect(onSubmit).toHaveBeenLastCalledWith({ reps: 5, weight_kg: 100, is_warmup: false, rpe: 8 })
+    await userEvent.click(screen.getByRole('radio', { name: /RPE 8/ }))
+    await userEvent.click(screen.getByRole('button', { name: /Satz abhaken/ }))
+    expect(onSubmit).toHaveBeenLastCalledWith({
+      reps: 5,
+      weight_kg: 100,
+      is_warmup: false,
+      rpe: null,
     })
   })
 
@@ -79,6 +103,7 @@ describe('SetEntry', () => {
     )
     expect(screen.queryByText('Gewicht (kg)')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Sekunden', { selector: 'input' })).toHaveValue('30')
+    expect(screen.queryByRole('radiogroup', { name: /RPE/ })).not.toBeInTheDocument()
   })
 })
 
