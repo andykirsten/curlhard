@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate, useParams } from '@tanstack/react-router'
+import { useNavigate, useParams } from '@tanstack/react-router'
 import { MoreHorizontal, Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -35,6 +35,7 @@ import { SetEntry, type SetValues } from '@/components/SetEntry'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/input'
 import { Sheet } from '@/components/ui/sheet'
+import { ExercisePeekSheet } from '@/components/workout/ExercisePeekSheet'
 import { ExerciseStrip } from '@/components/workout/ExerciseStrip'
 import { KlimentOverlay } from '@/components/workout/KlimentOverlay'
 import { InputDock } from '@/components/workout/InputDock'
@@ -212,6 +213,7 @@ function ExerciseFocus({
 
   const [notesOpen, setNotesOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [peekOpen, setPeekOpen] = useState(false)
   const [editing, setEditing] = useState<SetRead | null>(null)
 
   const working = se.sets.filter((s) => !s.is_warmup)
@@ -391,7 +393,14 @@ function ExerciseFocus({
         </div>
         <div className="mt-1 flex items-start justify-between gap-2">
           <h2 className="font-display text-[44px] uppercase leading-none" data-testid="exercise-title">
-            {name}
+            <button
+              type="button"
+              aria-label={`${name}: Übungsdetails ansehen`}
+              className="text-left uppercase"
+              onClick={() => setPeekOpen(true)}
+            >
+              {name}
+            </button>
           </h2>
           <button
             type="button"
@@ -468,12 +477,24 @@ function ExerciseFocus({
         </div>
       </Sheet>
 
+      <ExercisePeekSheet
+        open={peekOpen}
+        onOpenChange={setPeekOpen}
+        exerciseId={se.exercise_id}
+        name={name}
+        loadType={loadType}
+      />
+
       <Sheet open={menuOpen} onOpenChange={setMenuOpen} title={name}>
         <div className="flex flex-col gap-2 pb-2">
-          <Button variant="outline" asChild>
-            <Link to="/exercises/$exerciseId" params={{ exerciseId: String(se.exercise_id) }}>
-              Übungsdetails
-            </Link>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setMenuOpen(false)
+              setPeekOpen(true)
+            }}
+          >
+            Übungsdetails
           </Button>
           {!finished && (
             <Button

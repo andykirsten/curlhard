@@ -216,6 +216,10 @@ export interface HistoryPoint {
   e1rm: number | null;
   nrm: HistoryPointNrm;
   duration_sec: number | null;
+  working_sets: number;
+  max_rpe: number | null;
+  avg_rpe: number | null;
+  max_reps: number | null;
   value: number | null;
 }
 
@@ -223,6 +227,68 @@ export interface HistoryRead {
   exercise_id: number;
   metric: string;
   points: HistoryPoint[];
+}
+
+export interface RepProfilePoint {
+  reps: number;
+  actual_kg: number | null;
+  actual_date: string | null;
+  estimated_kg: number;
+}
+
+export type PrEventKind = typeof PrEventKind[keyof typeof PrEventKind];
+
+
+export const PrEventKind = {
+  e1rm: 'e1rm',
+  nrm: 'nrm',
+  reps: 'reps',
+} as const;
+
+export interface PrEvent {
+  date: string;
+  session_id: number;
+  kind: PrEventKind;
+  reps: number | null;
+  value: number;
+}
+
+export interface RepRanges {
+  strength: number;
+  hypertrophy: number;
+  endurance: number;
+}
+
+export interface WeeklyPoint {
+  week_start: string;
+  volume: number;
+  working_sets: number;
+  sessions: number;
+}
+
+export interface Lifetime {
+  total_volume: number | null;
+  total_sessions: number;
+  total_working_sets: number;
+  heaviest_set: BestSet | null;
+  most_reps: number | null;
+  best_session_volume: number | null;
+  avg_sessions_per_week: number | null;
+  days_since_last: number | null;
+  longest_hold_sec: number | null;
+  total_time_sec: number | null;
+}
+
+export interface InsightsRead {
+  exercise_id: number;
+  load_type: string;
+  rep_profile: RepProfilePoint[];
+  pr_events: PrEvent[];
+  rep_ranges: RepRanges;
+  weekly: WeeklyPoint[];
+  lifetime: Lifetime;
+  plateau_weeks: number | null;
+  training_days: string[];
 }
 
 export interface InviteCreate {
@@ -253,6 +319,63 @@ export interface LastSet {
   weight_kg: number;
   is_warmup: boolean;
   rpe: number | null;
+}
+
+export type PrMarkKind = typeof PrMarkKind[keyof typeof PrMarkKind];
+
+
+export const PrMarkKind = {
+  e1rm: 'e1rm',
+  nrm: 'nrm',
+  reps: 'reps',
+} as const;
+
+export interface PrMark {
+  kind: PrMarkKind;
+  reps: number | null;
+}
+
+export interface LogSet {
+  set_number: number;
+  reps: number;
+  weight_kg: number;
+  rpe: number | null;
+  is_warmup: boolean;
+  records: PrMark[];
+}
+
+export type SessionMetricsNrm = {[key: string]: number};
+
+export interface SessionMetrics {
+  session_id: number;
+  date: string;
+  volume: number | null;
+  best_set: BestSet;
+  e1rm: number | null;
+  nrm: SessionMetricsNrm;
+  duration_sec: number | null;
+  working_sets: number;
+  max_rpe: number | null;
+  avg_rpe: number | null;
+  max_reps: number | null;
+}
+
+export interface LogSession {
+  session_id: number;
+  started_at: string;
+  plan_day_name: string | null;
+  cycle_name: string | null;
+  note: string;
+  sets: LogSet[];
+  metrics: SessionMetrics | null;
+  e1rm_delta_pct: number | null;
+}
+
+export interface LogRead {
+  exercise_id: number;
+  load_type: string;
+  items: LogSession[];
+  next_before: string | null;
 }
 
 export interface LoginCreate {
@@ -519,18 +642,6 @@ export interface SessionExerciseUpdate {
   position?: number | null;
 }
 
-export type SessionMetricsNrm = {[key: string]: number};
-
-export interface SessionMetrics {
-  session_id: number;
-  date: string;
-  volume: number | null;
-  best_set: BestSet;
-  e1rm: number | null;
-  nrm: SessionMetricsNrm;
-  duration_sec: number | null;
-}
-
 export interface SessionPrevious {
   plan_day_name: string | null;
   exercises: PreviousExercise[];
@@ -705,6 +816,20 @@ export const ExerciseHistoryMetric = {
   volume: 'volume',
   best_set: 'best_set',
 } as const;
+
+export type ExerciseInsightsParams = {
+from?: string | null;
+to?: string | null;
+};
+
+export type ExerciseLogParams = {
+before?: string | null;
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
 
 export type OverviewParams = {
 /**
@@ -6851,6 +6976,242 @@ export function useExerciseRecords<TData = Awaited<ReturnType<typeof exerciseRec
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getExerciseRecordsQueryOptions(exerciseId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExerciseInsightsUrl = (exerciseId: number,
+    params?: ExerciseInsightsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/stats/exercises/${exerciseId}/insights?${stringifiedParams}` : `/api/v1/stats/exercises/${exerciseId}/insights`
+}
+
+/**
+ * Auswertungen zu einer Übung. `from`/`to` begrenzen nur Wochenverlauf und
+ * Wiederholungsbereiche; Rekorde, Profil, Lebenszeit-Werte und Trainingstage gelten immer
+ * für die gesamte Historie.
+ * @summary Exercise Insights
+ */
+export const exerciseInsights = async (exerciseId: number,
+    params?: ExerciseInsightsParams, options?: Parameters<typeof customFetch>[1]): Promise<InsightsRead> => {
+
+  return customFetch<InsightsRead>(getExerciseInsightsUrl(exerciseId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExerciseInsightsQueryKey = (exerciseId: number,
+    params?: ExerciseInsightsParams,) => {
+    return [
+    `/api/v1/stats/exercises/${exerciseId}/insights`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExerciseInsightsQueryOptions = <TData = Awaited<ReturnType<typeof exerciseInsights>>, TError = ErrorType<HTTPValidationError>>(exerciseId: number,
+    params?: ExerciseInsightsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exerciseInsights>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExerciseInsightsQueryKey(exerciseId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exerciseInsights>>> = ({ signal }) => exerciseInsights(exerciseId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: exerciseId !== null && exerciseId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exerciseInsights>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExerciseInsightsQueryResult = NonNullable<Awaited<ReturnType<typeof exerciseInsights>>>
+export type ExerciseInsightsQueryError = ErrorType<HTTPValidationError>
+
+
+export function useExerciseInsights<TData = Awaited<ReturnType<typeof exerciseInsights>>, TError = ErrorType<HTTPValidationError>>(
+ exerciseId: number,
+    params: undefined |  ExerciseInsightsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exerciseInsights>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exerciseInsights>>,
+          TError,
+          Awaited<ReturnType<typeof exerciseInsights>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExerciseInsights<TData = Awaited<ReturnType<typeof exerciseInsights>>, TError = ErrorType<HTTPValidationError>>(
+ exerciseId: number,
+    params?: ExerciseInsightsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exerciseInsights>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exerciseInsights>>,
+          TError,
+          Awaited<ReturnType<typeof exerciseInsights>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExerciseInsights<TData = Awaited<ReturnType<typeof exerciseInsights>>, TError = ErrorType<HTTPValidationError>>(
+ exerciseId: number,
+    params?: ExerciseInsightsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exerciseInsights>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Exercise Insights
+ */
+
+export function useExerciseInsights<TData = Awaited<ReturnType<typeof exerciseInsights>>, TError = ErrorType<HTTPValidationError>>(
+ exerciseId: number,
+    params?: ExerciseInsightsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exerciseInsights>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExerciseInsightsQueryOptions(exerciseId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExerciseLogUrl = (exerciseId: number,
+    params?: ExerciseLogParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/stats/exercises/${exerciseId}/log?${stringifiedParams}` : `/api/v1/stats/exercises/${exerciseId}/log`
+}
+
+/**
+ * Historie seitenweise: Sessions mit Sätzen, neueste zuerst; Cursor ist `started_at`.
+ * @summary Exercise Log
+ */
+export const exerciseLog = async (exerciseId: number,
+    params?: ExerciseLogParams, options?: Parameters<typeof customFetch>[1]): Promise<LogRead> => {
+
+  return customFetch<LogRead>(getExerciseLogUrl(exerciseId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExerciseLogQueryKey = (exerciseId: number,
+    params?: ExerciseLogParams,) => {
+    return [
+    `/api/v1/stats/exercises/${exerciseId}/log`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExerciseLogQueryOptions = <TData = Awaited<ReturnType<typeof exerciseLog>>, TError = ErrorType<HTTPValidationError>>(exerciseId: number,
+    params?: ExerciseLogParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exerciseLog>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExerciseLogQueryKey(exerciseId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exerciseLog>>> = ({ signal }) => exerciseLog(exerciseId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: exerciseId !== null && exerciseId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exerciseLog>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExerciseLogQueryResult = NonNullable<Awaited<ReturnType<typeof exerciseLog>>>
+export type ExerciseLogQueryError = ErrorType<HTTPValidationError>
+
+
+export function useExerciseLog<TData = Awaited<ReturnType<typeof exerciseLog>>, TError = ErrorType<HTTPValidationError>>(
+ exerciseId: number,
+    params: undefined |  ExerciseLogParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exerciseLog>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exerciseLog>>,
+          TError,
+          Awaited<ReturnType<typeof exerciseLog>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExerciseLog<TData = Awaited<ReturnType<typeof exerciseLog>>, TError = ErrorType<HTTPValidationError>>(
+ exerciseId: number,
+    params?: ExerciseLogParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exerciseLog>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exerciseLog>>,
+          TError,
+          Awaited<ReturnType<typeof exerciseLog>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExerciseLog<TData = Awaited<ReturnType<typeof exerciseLog>>, TError = ErrorType<HTTPValidationError>>(
+ exerciseId: number,
+    params?: ExerciseLogParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exerciseLog>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Exercise Log
+ */
+
+export function useExerciseLog<TData = Awaited<ReturnType<typeof exerciseLog>>, TError = ErrorType<HTTPValidationError>>(
+ exerciseId: number,
+    params?: ExerciseLogParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exerciseLog>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExerciseLogQueryOptions(exerciseId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

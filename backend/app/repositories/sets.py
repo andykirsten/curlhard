@@ -33,6 +33,9 @@ def load_sets(
             reps=s.reps,
             weight_kg=s.weight_kg,
             is_warmup=s.is_warmup,
+            rpe=s.rpe,
+            set_id=s.id,  # type: ignore[arg-type]
+            set_number=s.set_number,
         )
         for s, session_id in db.exec(stmt).all()
     ]

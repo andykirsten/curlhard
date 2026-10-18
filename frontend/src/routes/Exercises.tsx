@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { ChevronRight, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -245,14 +245,17 @@ export function ExercisesPage() {
               <Link
                 to="/exercises/$exerciseId"
                 params={{ exerciseId: String(ex.id) }}
-                className="flex-1 px-3 py-3"
+                className="flex flex-1 items-center gap-2 px-3 py-3"
               >
-                <div className="font-medium">{ex.name}</div>
-                <div className="text-xs text-muted-foreground">
-                  {ex.primary_muscle_group_id != null
-                    ? muscleName.get(ex.primary_muscle_group_id)
-                    : '–'}
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{ex.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {ex.primary_muscle_group_id != null
+                      ? muscleName.get(ex.primary_muscle_group_id)
+                      : '–'}
+                  </div>
                 </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
               </Link>
               {!ex.is_global && <Badge variant="secondary">eigene</Badge>}
               {(!ex.is_global || isAdmin) && (

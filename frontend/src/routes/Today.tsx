@@ -1,6 +1,7 @@
 import { keepPreviousData, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useMemo, useRef, useState, type ComponentProps, type ReactNode } from 'react'
+import { ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useCreateSession,
@@ -247,25 +248,32 @@ export function TodayPage() {
 
         {day && (
           <section ref={listRef} aria-label={day.name} className="scroll-mt-20">
-            <ol className="divide-y rounded-lg border bg-card">
+            <ol className="divide-y overflow-hidden rounded-lg border bg-card">
               {day.exercises.map((ex, i) => (
-                <li key={ex.plan_exercise_id} className="flex items-center gap-3 px-4 py-3">
-                  <span className="w-8 font-display text-2xl text-primary tabular-nums">
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-semibold">{ex.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {ex.target_sets} × {ex.target_reps_min}–{ex.target_reps_max} Wdh ·{' '}
-                      {ex.target_rest_sec} s Pause
-                    </div>
-                    {lastLabel(ex) && <div className="text-sm">{lastLabel(ex)}</div>}
-                    {ex.permanent_note && (
-                      <div className="text-sm italic text-muted-foreground">
-                        {ex.permanent_note}
+                <li key={ex.plan_exercise_id}>
+                  <Link
+                    to="/exercises/$exerciseId"
+                    params={{ exerciseId: String(ex.exercise_id) }}
+                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/40 active:bg-accent/60"
+                  >
+                    <span className="w-8 font-display text-2xl text-primary tabular-nums">
+                      {String(i + 1).padStart(2, '0')}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold">{ex.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {ex.target_sets} × {ex.target_reps_min}–{ex.target_reps_max} Wdh ·{' '}
+                        {ex.target_rest_sec} s Pause
                       </div>
-                    )}
-                  </div>
+                      {lastLabel(ex) && <div className="text-sm">{lastLabel(ex)}</div>}
+                      {ex.permanent_note && (
+                        <div className="text-sm italic text-muted-foreground">
+                          {ex.permanent_note}
+                        </div>
+                      )}
+                    </div>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                  </Link>
                 </li>
               ))}
             </ol>
