@@ -16,7 +16,7 @@ export function PrivacyPage() {
       <ul className="list-disc space-y-1 pl-5">
         <li>Konto: E-Mail-Adresse, Anzeigename, Passwort (nur als Argon2id-Hash)</li>
         <li>Optional: Körpergewicht (für Körpergewichtsübungen)</li>
-        <li>Trainingsdaten: Pläne, Sessions, Sätze, Notizen</li>
+        <li>Trainingsdaten: Pläne, Sessions, Sätze, Notizen, Stangengewichte pro Übung</li>
         <li>Technisch notwendig: ein Session-Cookie zur Anmeldung (HttpOnly, 30 Tage)</li>
       </ul>
       <h2 className="text-lg font-semibold">Deine Rechte</h2>

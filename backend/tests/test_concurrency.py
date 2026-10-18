@@ -12,7 +12,7 @@ from sqlmodel import Session, SQLModel, func, select
 
 from app.config import Settings
 from app.main import create_app
-from app.models import ExerciseNote, SetLog, User, UserAvatar
+from app.models import ExerciseNote, ExerciseSetting, SetLog, User, UserAvatar
 from app.services.auth import hash_password
 
 API = "/api/v1"
@@ -122,6 +122,23 @@ def test_parallel_first_note_creates_exactly_one_row(app, alice, bench):
         select(func.count())
         .select_from(ExerciseNote)
         .where(ExerciseNote.exercise_id == bench["id"]),
+    )
+    assert count == [1]
+
+
+def test_parallel_first_setting_creates_exactly_one_row(app, alice, bench):
+    responses = _run(
+        10,
+        lambda i: alice.put(
+            f"{API}/exercises/{bench['id']}/setting", json={"bar_weight_kg": 10 + i}
+        ),
+    )
+    assert _statuses(responses) == [200] * 10
+    count = _scalar(
+        app,
+        select(func.count())
+        .select_from(ExerciseSetting)
+        .where(ExerciseSetting.exercise_id == bench["id"]),
     )
     assert count == [1]
 

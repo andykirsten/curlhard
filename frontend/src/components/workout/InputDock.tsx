@@ -1,38 +1,56 @@
+import { RpePicker } from '@/components/RpePicker'
 import { Stepper } from '@/components/Stepper'
 import { formatWeight } from '@/lib/weight'
 
 /**
  * Ein Eingabe-Dock im Daumenbereich: Kilo/Wdh-Stepper für den nächsten Satz,
- * Aufwärm-Toggle und „Satz abhaken“. Zustand liegt beim Aufrufer, damit die
+ * optionale RPE-Auswahl, Aufwärm-Toggle und „Satz abhaken“. Zustand liegt beim Aufrufer, damit die
  * aktive Tabellenzeile die Werte live spiegeln kann.
  */
 export function InputDock({
   weight,
   reps,
   warmup,
+  rpe,
   weightStep,
   loadType = 'weight',
   disabled,
   onWeight,
   onReps,
   onWarmup,
+  onRpe,
   onSubmit,
+  plates,
 }: {
   weight: number
   reps: number
   warmup: boolean
+  rpe: number | null
   weightStep: number
   loadType?: string
   disabled?: boolean
   onWeight: (v: number) => void
   onReps: (v: number) => void
   onWarmup: (v: boolean) => void
+  onRpe: (v: number | null) => void
   onSubmit: () => void
+  /** Scheibenrechner-Zeile über den Steppern (nur mit Stangengewicht) */
+  plates?: { summary: string; onOpen: () => void }
 }) {
   const isTime = loadType === 'time'
   return (
     <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-xl md:max-w-2xl rounded-t-[28px] border-t bg-card px-4 pb-4 pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.12)]">
       <div className="flex flex-col gap-2.5">
+        {plates && !isTime && (
+          <button
+            type="button"
+            aria-label={`Scheibenrechner: ${plates.summary}`}
+            className="-mb-1 truncate text-left text-xs font-semibold tabular-nums text-muted-foreground"
+            onClick={plates.onOpen}
+          >
+            {plates.summary} ›
+          </button>
+        )}
         <div className={`grid gap-2.5 ${isTime ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {!isTime && (
             <Stepper
@@ -55,6 +73,7 @@ export function InputDock({
             step={isTime ? 5 : 1}
           />
         </div>
+        {!isTime && !warmup && <RpePicker value={rpe} onChange={onRpe} compact />}
         <div className="flex gap-2.5">
           <button
             type="button"

@@ -307,3 +307,29 @@ def test_plateau_weeks():
     assert stats.plateau_weeks([], NOW) is None
     t = stats.history([s(1, 3, 60, 0)], "time", None)
     assert stats.plateau_weeks(t, NOW) is None
+
+
+def test_rpe_adds_reps_in_reserve():
+    assert stats.reps_to_failure(8, None) == 8
+    assert stats.reps_to_failure(8, 10) == 8
+    assert stats.reps_to_failure(8, 8) == 10
+    assert stats.reps_to_failure(8, 7.5) == 10.5
+    # Reserve höchstens 4 Wdh., Gesamt höchstens 30
+    assert stats.reps_to_failure(8, 3) == 12
+    assert stats.reps_to_failure(28, 6) == 30
+    assert stats.e1rm(80, 8, 8) == pytest.approx(80 * (1 + 10 / 30))
+    assert stats.e1rm(40, 20, 7) == pytest.approx(40 * stats.rm_factor(23))
+
+
+def test_session_metrics_uses_rpe_for_e1rm():
+    # 100 × 5 @ RPE 7 (3 in Reserve) schlägt 100 × 6 @ RPE 10
+    m = stats.session_metrics([sr(1, 1, 6, 100, rpe=10), sr(1, 1, 5, 100, rpe=7)], "weight", None)
+    assert m["e1rm"] == pytest.approx(100 * (1 + 8 / 30), abs=0.01)
+    assert m["best_set"] == {"reps": 5, "weight_kg": 100}
+
+
+def test_pr_events_use_rpe():
+    sets = [sr(1, 10, 8, 80, rpe=10, set_id=1), sr(2, 3, 8, 80, rpe=8, set_id=2)]
+    events = stats.pr_events(sets, "weight", None)
+    assert [e["kind"] for e in events] == ["e1rm"]
+    assert events[0]["value"] == pytest.approx(80 * (1 + 10 / 30), abs=0.01)

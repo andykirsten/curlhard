@@ -87,15 +87,45 @@ test('Einladung → Registrierung → Plan → Workout loggen → Fortschritt', 
   await page.getByRole('textbox', { name: 'Gewicht (kg)' }).fill('22,5')
   await page.getByRole('textbox', { name: 'Wiederholungen' }).fill('6')
   await expect(page.getByTestId('active-row')).toContainText('6 × 22,5 kg')
+  // Optionale Anstrengung: RPE 8 (2 Wdh. in Reserve)
+  await page.getByRole('radio', { name: /^RPE 8/ }).click()
   await page.getByRole('button', { name: /Satz abhaken/ }).click()
   await expect(doneRows).toHaveCount(2)
-  await expect(doneRows.nth(1)).toContainText('6 × 22,5 kg')
+  await expect(doneRows.nth(1)).toContainText('6 × 22,5 kg@8')
+
+  // Pause beenden, damit das Eingabe-Dock wieder frei ist
+  await page.getByRole('button', { name: 'Weiter', exact: true }).click()
+
+  // --- Scheibenrechner: Schulterdrücken ist eine Langhantel-Übung → 20-kg-Stange ---
+  await page.getByRole('tab', { name: /^Übung 2: Schulterdrücken/ }).click()
+  await expect(page.getByTestId('exercise-title')).toHaveText('Schulterdrücken')
+  await page.getByRole('textbox', { name: 'Gewicht (kg)' }).fill('60')
+  await page.getByRole('button', { name: /Scheibenrechner: Stange 20 · je Seite 20$/ }).click()
+  await expect(page.getByTestId('plate-per-side')).toHaveText('Je Seite: 20')
+  // Eigenes Stangengewicht für diese Übung, danach zurück auf den Standard
+  await page.getByRole('radio', { name: '15', exact: true }).click()
+  await expect(page.getByTestId('plate-per-side')).toHaveText('Je Seite: 20 + 2,5')
+  await page.getByRole('button', { name: 'Auf Standard (20 kg) zurücksetzen' }).click()
+  await expect(page.getByTestId('plate-per-side')).toHaveText('Je Seite: 20')
+  await page.getByRole('button', { name: 'Schließen' }).click()
+
+  // --- Aufwärmen: Vorschlag zum Dock-Gewicht, Aufwärmsatz abhaken, zurück zum Arbeitssatz ---
+  await page.getByRole('button', { name: 'Aufwärmen für 60 kg vorschlagen' }).click()
+  const warmupPlan = page.getByTestId('warmup-plan')
+  await expect(warmupPlan).toContainText('10 × 20')
+  await expect(warmupPlan).toContainText('2 × 47,5')
+  await expect(page.getByTestId('active-row')).toContainText('10 × 20 kg')
+  await page.getByRole('button', { name: /Satz abhaken/ }).click()
+  await expect(page.getByRole('button', { name: 'Aufwärmsatz 10 × 20 kg, erledigt' })).toBeVisible()
+  await expect(page.getByTestId('active-row')).toContainText('5 × 25 kg')
+  await page.getByRole('button', { name: 'Ausblenden' }).click()
+  await expect(page.getByTestId('active-row')).toContainText('× 60 kg')
 
   // --- Training beenden, im Verlauf auffindbar ---
   await page.getByRole('button', { name: 'Beenden' }).click()
   await expect(page.getByRole('heading', { name: /Heute/ })).toBeVisible()
   await page.getByRole('link', { name: 'Verlauf', exact: true }).click()
-  await expect(page.getByText('1 Übungen · 2 Sätze').or(page.getByText('2 Übungen · 2 Sätze'))).toBeVisible()
+  await expect(page.getByText('2 Übungen · 3 Sätze')).toBeVisible()
 
   // --- Übungsdetail: Kennzahlen aus den geloggten Sätzen ---
   await page.getByRole('link', { name: 'Übungen', exact: true }).click()

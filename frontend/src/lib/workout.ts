@@ -6,11 +6,14 @@ const mayhew = (reps: number) => 1 / (0.522 + 0.419 * Math.exp(-0.055 * reps))
 /**
  * Geschätztes Maximum wie in backend/app/services/stats.py: bis 15 Wdh. Epley, darüber die
  * an Epley angeschlossene, flachere Mayhew-Kurve (bei mehr als 30 Wdh. auf 30 begrenzt).
+ * Mit RPE zählt die Reserve (10 − RPE, höchstens 4 Wdh.) zu den Wiederholungen.
  */
-export function e1rm(weight: number, reps: number): number {
-  if (reps <= 1) return weight
-  if (reps <= 15) return weight * (1 + reps / 30)
-  return (weight * 1.5 * mayhew(Math.min(reps, 30))) / mayhew(15)
+export function e1rm(weight: number, reps: number, rpe: number | null = null): number {
+  const rir = rpe == null ? 0 : Math.min(Math.max(10 - rpe, 0), 4)
+  const r = Math.min(reps + rir, 30)
+  if (r <= 1) return weight
+  if (r <= 15) return weight * (1 + r / 30)
+  return (weight * 1.5 * mayhew(r)) / mayhew(15)
 }
 
 interface SetLike {

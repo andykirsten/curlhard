@@ -111,3 +111,40 @@ def test_note_on_foreign_private_exercise_404(alice, bob):
     ex = alice.post(f"{API}/exercises", json={"name": "Geheim"}).json()
     assert bob.get(f"{API}/exercises/{ex['id']}/note").status_code == 404
     assert bob.put(f"{API}/exercises/{ex['id']}/note", json={"note": "x"}).status_code == 404
+
+
+def _equipment_id(admin, name: str) -> int:
+    return admin.post(f"{API}/equipment", json={"name": name}).json()["id"]
+
+
+def test_bar_weight_defaults_from_equipment(admin, alice):
+    barbell = _equipment_id(admin, "Langhantel")
+    ez = _equipment_id(admin, "SZ-Stange")
+    machine = _equipment_id(admin, "Maschine")
+    defaults = {}
+    for name, eq in (("Kniebeuge", barbell), ("SZ-Curls", ez), ("Beinpresse", machine)):
+        ex = alice.post(f"{API}/exercises", json={"name": name, "equipment_id": eq}).json()
+        r = alice.get(f"{API}/exercises/{ex['id']}/setting")
+        assert r.status_code == 200
+        assert r.json()["bar_weight_kg"] is None
+        defaults[name] = r.json()["default_bar_weight_kg"]
+    assert defaults == {"Kniebeuge": 20.0, "SZ-Curls": 10.0, "Beinpresse": None}
+
+
+def test_bar_weight_roundtrip_per_user(alice, bob, catalog):
+    ex = catalog["squat"]["id"]
+    r = alice.put(f"{API}/exercises/{ex}/setting", json={"bar_weight_kg": 15})
+    assert r.status_code == 200 and r.json()["bar_weight_kg"] == 15
+    assert alice.get(f"{API}/exercises/{ex}/setting").json()["bar_weight_kg"] == 15
+    assert bob.get(f"{API}/exercises/{ex}/setting").json()["bar_weight_kg"] is None
+    # null setzt auf den Standard zurück
+    alice.put(f"{API}/exercises/{ex}/setting", json={"bar_weight_kg": None})
+    assert alice.get(f"{API}/exercises/{ex}/setting").json()["bar_weight_kg"] is None
+
+
+def test_bar_weight_validated(alice, catalog):
+    ex = catalog["squat"]["id"]
+    assert alice.put(f"{API}/exercises/{ex}/setting", json={"bar_weight_kg": -1}).status_code == 422
+    assert (
+        alice.put(f"{API}/exercises/{ex}/setting", json={"bar_weight_kg": 500}).status_code == 422
+    )

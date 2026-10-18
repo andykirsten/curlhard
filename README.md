@@ -39,7 +39,7 @@ Endpunkt: fremde Ressourcen liefern 404, ohne Login 401.
 `backend/app/services/stats.py` (reine Funktionen, Unit-Tests in `tests/test_stats_unit.py`):
 `e1RM = w · f(r)`, nRM `= e1RM / f(n)` mit `f(r) = 1 + r/30` (Epley) bis 15 Wdh., darüber die an Epley
 angeschlossene Mayhew-Kurve `f(r) = 1,5 · M(r) / M(15)`, `M(r) = 1 / (0,522 + 0,419 · e^(−0,055 r))`;
-Sätze > 30 Wdh. fließen nicht in die Schätzung,
+mit RPE zählt die Reserve mit (`r + min(10 − RPE, 4)`, höchstens 30), Sätze > 30 Wdh. fließen nicht in die Schätzung,
 Aufwärmsätze zählen nie. „Veränderung ggü. 4/12 Wochen“ vergleicht die letzten 4 Wochen mit dem
 4-Wochen-Fenster, das 4 bzw. 12 Wochen zurückliegt.
 

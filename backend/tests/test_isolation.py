@@ -40,6 +40,8 @@ def _cases(w):
         ("patch", f"/exercises/{w['private']}", {"name": "gehackt"}),
         ("get", f"/exercises/{w['private']}/note", None),
         ("put", f"/exercises/{w['private']}/note", {"note": "x"}),
+        ("get", f"/exercises/{w['private']}/setting", None),
+        ("put", f"/exercises/{w['private']}/setting", {"bar_weight_kg": 10}),
         ("get", f"/plans/{w['plan']}", None),
         ("patch", f"/plans/{w['plan']}", {"name": "gehackt"}),
         ("delete", f"/plans/{w['plan']}", None),
