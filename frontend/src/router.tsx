@@ -99,6 +99,8 @@ const routeTree = rootRoute.addChildren([
     createRoute({
       getParentRoute: () => appRoute,
       path: '/exercises/$exerciseId',
+      validateSearch: (search: Record<string, unknown>): { tab?: 'statistik' | 'historie' } =>
+        search.tab === 'historie' ? { tab: 'historie' } : {},
       component: lazyRouteComponent(() => import('./routes/ExerciseDetail'), 'ExerciseDetailPage'),
     }),
     createRoute({

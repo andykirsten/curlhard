@@ -154,3 +154,133 @@ def test_overview_weekly_volume_and_muscles():
     assert this_week["by_muscle_group"] == {7: 1200.0, 8: 100.0}
     assert weeks[-2]["volume"] == 500.0
     assert weeks[0]["volume"] == 0
+
+
+def sr(session, days_ago, reps, weight, rpe=None, warm=False, set_id=0, num=0):
+    return SetData(session, NOW - timedelta(days=days_ago), reps, weight, warm, rpe, set_id, num)
+
+
+def test_session_metrics_rpe_and_working_sets():
+    m = stats.session_metrics(
+        [sr(1, 1, 8, 80, rpe=7), sr(1, 1, 8, 80, rpe=9), sr(1, 1, 10, 40, rpe=3, warm=True)],
+        "weight",
+        None,
+    )
+    assert m["working_sets"] == 2
+    assert m["max_rpe"] == 9 and m["avg_rpe"] == 8.0
+    assert m["max_reps"] is None
+
+
+def test_session_metrics_max_reps_for_bodyweight_and_time():
+    m = stats.session_metrics([s(1, 1, 10, 0), s(1, 1, 12, 0)], "bodyweight", 80)
+    assert m["max_reps"] == 12 and m["max_rpe"] is None
+    t = stats.session_metrics([s(1, 1, 60, 0)], "time", None)
+    assert t["working_sets"] == 1 and t["max_reps"] is None
+
+
+def test_rep_profile_actual_vs_estimated():
+    sets = [s(1, 5, 5, 100), s(2, 2, 10, 80), s(3, 1, 10, 30, warm=True)]
+    best = max(100 * (1 + 5 / 30), 80 * (1 + 10 / 30))
+    prof = stats.rep_profile(sets, "weight", None, best)
+    assert [p["reps"] for p in prof] == list(range(1, 16))
+    assert prof[0]["actual_kg"] == 100  # >= 1 Wdh.
+    assert prof[4]["actual_kg"] == 100
+    assert prof[9]["actual_kg"] == 80
+    assert prof[10]["actual_kg"] is None and prof[10]["actual_date"] is None
+    assert prof[7]["estimated_kg"] == pytest.approx(stats.nrm(best, 8), abs=0.01)
+
+
+def test_rep_profile_empty_for_time_or_without_e1rm():
+    assert stats.rep_profile([s(1, 1, 60, 0)], "time", None, None) == []
+    assert stats.rep_profile([s(1, 1, 20, 40)], "weight", None, None) == []
+
+
+def test_pr_events_first_session_is_baseline():
+    sets = [
+        sr(1, 30, 5, 100, set_id=1, num=1),
+        sr(1, 30, 5, 105, set_id=2, num=2),  # gleiche Session, Basis
+        sr(2, 10, 5, 110, set_id=3, num=1),
+        sr(2, 10, 5, 50, warm=True, set_id=4, num=2),
+        sr(3, 2, 5, 110, set_id=5, num=1),  # kein neuer Rekord
+    ]
+    ev = stats.pr_events(sets, "weight", None)
+    assert {e["session_id"] for e in ev} == {2}
+    kinds = {(e["kind"], e["reps"]) for e in ev}
+    assert kinds == {("e1rm", None), ("nrm", 1), ("nrm", 5)}
+    assert all(e["set_id"] == 3 for e in ev)
+
+
+def test_pr_events_time_and_empty():
+    assert stats.pr_events([s(1, 5, 60, 0), s(2, 1, 90, 0)], "time", None) == []
+    assert stats.pr_events([], "weight", None) == []
+
+
+def test_pr_events_bodyweight_most_reps():
+    sets = [sr(1, 20, 8, 0, set_id=1), sr(2, 5, 12, 0, set_id=2)]
+    ev = stats.pr_events(sets, "bodyweight", 80)
+    assert any(e["kind"] == "reps" and e["value"] == 12 for e in ev)
+
+
+def test_pr_timeline_keeps_best_per_session_and_kind():
+    sets = [
+        sr(1, 30, 5, 100, set_id=1),
+        sr(2, 10, 5, 105, set_id=2, num=1),
+        sr(2, 10, 5, 110, set_id=3, num=2),
+    ]
+    tl = stats.pr_timeline(stats.pr_events(sets, "weight", None))
+    e1 = [e for e in tl if e["kind"] == "e1rm"]
+    assert len(e1) == 1 and e1[0]["value"] == pytest.approx(110 * (1 + 5 / 30), abs=0.01)
+
+
+def test_rep_ranges_buckets_exclude_warmups():
+    sets = [s(1, 1, 3, 100), s(1, 1, 5, 90), s(1, 1, 6, 80), s(1, 1, 12, 60), s(1, 1, 13, 40)]
+    sets.append(s(1, 1, 8, 20, warm=True))
+    assert stats.rep_ranges(sets) == {"strength": 2, "hypertrophy": 2, "endurance": 1}
+
+
+def test_weekly_fills_gaps_and_sums():
+    sets = [s(1, 21, 5, 100), s(1, 21, 5, 100), s(2, 1, 10, 50)]
+    rows = stats.history(sets, "weight", None)
+    wk = stats.weekly(rows)
+    assert len(wk) >= 3
+    assert wk[0]["volume"] == 1000 and wk[0]["working_sets"] == 2 and wk[0]["sessions"] == 1
+    assert any(w["volume"] == 0 and w["sessions"] == 0 for w in wk)
+    assert stats.weekly([]) == []
+
+
+def test_lifetime_weight():
+    sets = [s(1, 20, 5, 100), s(2, 10, 8, 90), s(2, 10, 20, 30), s(2, 10, 10, 20, warm=True)]
+    rows = stats.history(sets, "weight", None)
+    lt = stats.lifetime(sets, rows, "weight", None, NOW)
+    assert lt["total_volume"] == 500 + 720 + 600
+    assert lt["total_sessions"] == 2 and lt["total_working_sets"] == 3
+    assert lt["heaviest_set"] == {"reps": 5, "weight_kg": 100.0}
+    assert lt["most_reps"] == 20
+    assert lt["best_session_volume"] == 1320
+    assert lt["days_since_last"] == 10
+    assert lt["longest_hold_sec"] is None
+
+
+def test_lifetime_time_and_empty():
+    sets = [s(1, 5, 60, 0), s(2, 2, 90, 0)]
+    rows = stats.history(sets, "time", None)
+    lt = stats.lifetime(sets, rows, "time", None, NOW)
+    assert lt["longest_hold_sec"] == 90 and lt["total_time_sec"] == 150
+    assert lt["total_volume"] is None and lt["heaviest_set"] is None
+    empty = stats.lifetime([], [], "weight", None, NOW)
+    assert empty["total_sessions"] == 0 and empty["avg_sessions_per_week"] is None
+
+
+def test_lifetime_bodyweight_uses_body_weight():
+    sets = [s(1, 3, 10, 0)]
+    rows = stats.history(sets, "bodyweight", 80)
+    lt = stats.lifetime(sets, rows, "bodyweight", 80, NOW)
+    assert lt["total_volume"] == 800 and lt["heaviest_set"]["weight_kg"] == 80
+
+
+def test_plateau_weeks():
+    rows = stats.history([s(1, 7 * 6, 5, 100), s(2, 7 * 2, 5, 90)], "weight", None)
+    assert stats.plateau_weeks(rows, NOW) == 6
+    assert stats.plateau_weeks([], NOW) is None
+    t = stats.history([s(1, 3, 60, 0)], "time", None)
+    assert stats.plateau_weeks(t, NOW) is None

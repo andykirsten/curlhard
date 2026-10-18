@@ -16,3 +16,6 @@ export function useMediaQuery(query: string): boolean {
 
 /** Tailwind `md` (Tablet und größer). */
 export const useIsTabletUp = () => useMediaQuery('(min-width: 768px)')
+
+/** Nutzer wünscht reduzierte Bewegung (Animationen weglassen). */
+export const usePrefersReducedMotion = () => useMediaQuery('(prefers-reduced-motion: reduce)')

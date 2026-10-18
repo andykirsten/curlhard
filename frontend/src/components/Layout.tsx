@@ -1,4 +1,11 @@
-import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import {
+  Link,
+  Outlet,
+  useCanGoBack,
+  useNavigate,
+  useRouter,
+  useRouterState,
+} from '@tanstack/react-router'
 import { ClipboardList, Dumbbell, History, Home } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useMe } from '@/api'
@@ -132,12 +139,16 @@ export function AppLayout() {
 interface PageHeaderProps {
   title: string
   back?: string
+  /** Zurück per Browser-History (z. B. zur aufrufenden Seite), `back` dient als Fallback. */
+  backHistory?: boolean
   actions?: ReactNode
   profile?: boolean
 }
 
-export function PageHeader({ title, back, actions, profile }: PageHeaderProps) {
+export function PageHeader({ title, back, backHistory, actions, profile }: PageHeaderProps) {
   const navigate = useNavigate()
+  const router = useRouter()
+  const canGoBack = useCanGoBack()
   const me = useMe()
   return (
     <header className="safe-top sticky top-0 z-10 flex items-center gap-2 border-b bg-background/95 px-4 py-3 backdrop-blur">
@@ -146,7 +157,10 @@ export function PageHeader({ title, back, actions, profile }: PageHeaderProps) {
           type="button"
           aria-label="Zurück"
           className="-ml-2 rounded-md px-2 py-1 text-lg"
-          onClick={() => void navigate({ to: back })}
+          onClick={() => {
+            if (backHistory && canGoBack) router.history.back()
+            else void navigate({ to: back })
+          }}
         >
           ←
         </button>

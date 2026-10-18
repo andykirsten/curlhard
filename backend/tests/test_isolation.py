@@ -67,6 +67,8 @@ def _cases(w):
         ("get", f"/stats/exercises/{w['private']}/summary", None),
         ("get", f"/stats/exercises/{w['private']}/history", None),
         ("get", f"/stats/exercises/{w['private']}/records", None),
+        ("get", f"/stats/exercises/{w['private']}/insights", None),
+        ("get", f"/stats/exercises/{w['private']}/log", None),
         ("patch", f"/cycles/{w['cycle']}", {"name": "gehackt"}),
         ("post", f"/cycles/{w['cycle']}/activate", None),
         ("post", f"/cycles/{w['cycle']}/end", None),
@@ -125,6 +127,9 @@ def test_stats_of_global_exercise_are_per_user(alice, bob, catalog):
     assert alice.get(f"{API}/stats/exercises/{ex}/summary").json()["session_count"] == 1
     assert bob.get(f"{API}/stats/exercises/{ex}/summary").json()["session_count"] == 0
     assert bob.get(f"{API}/stats/exercises/{ex}/history").json()["points"] == []
+    assert bob.get(f"{API}/stats/exercises/{ex}/log").json()["items"] == []
+    assert bob.get(f"{API}/stats/exercises/{ex}/insights").json()["lifetime"]["total_sessions"] == 0
+    assert len(alice.get(f"{API}/stats/exercises/{ex}/log").json()["items"]) == 1
 
 
 def test_admin_has_no_access_to_user_data(admin, alice, world):

@@ -102,9 +102,32 @@ test('Einladung → Registrierung → Plan → Workout loggen → Fortschritt', 
   await page.getByLabel('Übungen suchen').fill('Bankdrücken')
   await page.getByRole('link', { name: /^Bankdrücken/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Bankdrücken' })).toBeVisible()
-  // e1RM = 40 * (1 + 8/30) = 31,67 kg
-  await expect(page.getByText('31,67 kg').first()).toBeVisible()
-  await expect(page.getByText('Tatsächliche Bestwerte')).toBeVisible()
+  // e1RM = 40 * (1 + 8/30) = 31,67 kg (Hero, Hochzähl-Animation läuft aus)
+  await expect(page.getByText('31,67').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'e1RM-Verlauf' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Insgesamt' })).toBeVisible()
+
+  // --- Tab Historie: Session mit Sätzen, direkt verlinkbar über ?tab= ---
+  await page.getByRole('radio', { name: 'Historie' }).click()
+  await expect(page).toHaveURL(/tab=historie/)
+  await expect(page.getByText('25 kg × 8')).toBeVisible()
+  await expect(page.getByText('22,5 kg × 6')).toBeVisible()
+
+  // --- Einstieg aus Heute: Übungszeile ist ein Link, Zurück führt zur Tagesansicht ---
+  await page.getByRole('link', { name: 'Heute', exact: true }).click()
+  await page.getByRole('link', { name: /Bankdrücken/ }).click()
+  await expect(page.getByRole('heading', { name: 'Bankdrücken' })).toBeVisible()
+  await page.getByRole('button', { name: 'Zurück' }).click()
+  await expect(page.getByRole('heading', { name: 'Push', exact: true })).toBeVisible()
+
+  // --- Workout (hier die beendete Session): Titel antippen öffnet die Schnellansicht mit Link zur vollen Seite ---
+  await page.getByRole('link', { name: 'Zusammenfassung' }).click()
+  await expect(page.getByTestId('exercise-title')).toHaveText('Bankdrücken')
+  await page.getByTestId('exercise-title').getByRole('button').click()
+  await expect(page.getByRole('dialog').getByText('Nächstes PR-Ziel')).toBeVisible()
+  await page.getByRole('link', { name: 'Alle Statistiken' }).click()
+  await expect(page).toHaveURL(/\/exercises\/\d+/)
+  await expect(page.getByRole('heading', { name: 'Bankdrücken' })).toBeVisible()
 })
 
 test('falsche Zugangsdaten zeigen eine Fehlermeldung', async ({ page }) => {

@@ -3008,6 +3008,155 @@
         }
       }
     },
+    "/api/v1/stats/exercises/{exercise_id}/insights": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Exercise Insights",
+        "description": "Auswertungen zu einer Übung. `from`/`to` begrenzen nur Wochenverlauf und\nWiederholungsbereiche; Rekorde, Profil, Lebenszeit-Werte und Trainingstage gelten immer\nfür die gesamte Historie.",
+        "operationId": "exercise_insights",
+        "parameters": [
+          {
+            "name": "exercise_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Exercise Id"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightsRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/exercises/{exercise_id}/log": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Exercise Log",
+        "description": "Historie seitenweise: Sessions mit Sätzen, neueste zuerst; Cursor ist `started_at`.",
+        "operationId": "exercise_log",
+        "parameters": [
+          {
+            "name": "exercise_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Exercise Id"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/stats/overview": {
       "get": {
         "tags": [
@@ -3869,6 +4018,44 @@
             ],
             "title": "Duration Sec"
           },
+          "working_sets": {
+            "type": "integer",
+            "title": "Working Sets",
+            "default": 0
+          },
+          "max_rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Rpe"
+          },
+          "avg_rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Rpe"
+          },
+          "max_reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Reps"
+          },
           "value": {
             "anyOf": [
               {
@@ -3890,6 +4077,10 @@
           "e1rm",
           "nrm",
           "duration_sec",
+          "working_sets",
+          "max_rpe",
+          "avg_rpe",
+          "max_reps",
           "value"
         ],
         "title": "HistoryPoint"
@@ -3919,6 +4110,77 @@
           "points"
         ],
         "title": "HistoryRead"
+      },
+      "InsightsRead": {
+        "properties": {
+          "exercise_id": {
+            "type": "integer",
+            "title": "Exercise Id"
+          },
+          "load_type": {
+            "type": "string",
+            "title": "Load Type"
+          },
+          "rep_profile": {
+            "items": {
+              "$ref": "#/components/schemas/RepProfilePoint"
+            },
+            "type": "array",
+            "title": "Rep Profile"
+          },
+          "pr_events": {
+            "items": {
+              "$ref": "#/components/schemas/PrEvent"
+            },
+            "type": "array",
+            "title": "Pr Events"
+          },
+          "rep_ranges": {
+            "$ref": "#/components/schemas/RepRanges"
+          },
+          "weekly": {
+            "items": {
+              "$ref": "#/components/schemas/WeeklyPoint"
+            },
+            "type": "array",
+            "title": "Weekly"
+          },
+          "lifetime": {
+            "$ref": "#/components/schemas/Lifetime"
+          },
+          "plateau_weeks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plateau Weeks"
+          },
+          "training_days": {
+            "items": {
+              "type": "string",
+              "format": "date"
+            },
+            "type": "array",
+            "title": "Training Days"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exercise_id",
+          "load_type",
+          "rep_profile",
+          "pr_events",
+          "rep_ranges",
+          "weekly",
+          "lifetime",
+          "plateau_weeks",
+          "training_days"
+        ],
+        "title": "InsightsRead"
       },
       "InviteCreate": {
         "properties": {
@@ -4048,6 +4310,285 @@
           "rpe"
         ],
         "title": "LastSet"
+      },
+      "Lifetime": {
+        "properties": {
+          "total_volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Volume"
+          },
+          "total_sessions": {
+            "type": "integer",
+            "title": "Total Sessions"
+          },
+          "total_working_sets": {
+            "type": "integer",
+            "title": "Total Working Sets"
+          },
+          "heaviest_set": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BestSet"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "most_reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Most Reps"
+          },
+          "best_session_volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Session Volume"
+          },
+          "avg_sessions_per_week": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Sessions Per Week"
+          },
+          "days_since_last": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Since Last"
+          },
+          "longest_hold_sec": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longest Hold Sec"
+          },
+          "total_time_sec": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Time Sec"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_volume",
+          "total_sessions",
+          "total_working_sets",
+          "heaviest_set",
+          "most_reps",
+          "best_session_volume",
+          "avg_sessions_per_week",
+          "days_since_last",
+          "longest_hold_sec",
+          "total_time_sec"
+        ],
+        "title": "Lifetime"
+      },
+      "LogRead": {
+        "properties": {
+          "exercise_id": {
+            "type": "integer",
+            "title": "Exercise Id"
+          },
+          "load_type": {
+            "type": "string",
+            "title": "Load Type"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LogSession"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_before": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exercise_id",
+          "load_type",
+          "items",
+          "next_before"
+        ],
+        "title": "LogRead"
+      },
+      "LogSession": {
+        "properties": {
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "plan_day_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Day Name"
+          },
+          "cycle_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle Name"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "sets": {
+            "items": {
+              "$ref": "#/components/schemas/LogSet"
+            },
+            "type": "array",
+            "title": "Sets"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "e1rm_delta_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "E1Rm Delta Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id",
+          "started_at",
+          "plan_day_name",
+          "cycle_name",
+          "note",
+          "sets",
+          "metrics",
+          "e1rm_delta_pct"
+        ],
+        "title": "LogSession"
+      },
+      "LogSet": {
+        "properties": {
+          "set_number": {
+            "type": "integer",
+            "title": "Set Number"
+          },
+          "reps": {
+            "type": "integer",
+            "title": "Reps"
+          },
+          "weight_kg": {
+            "type": "number",
+            "title": "Weight Kg"
+          },
+          "rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rpe"
+          },
+          "is_warmup": {
+            "type": "boolean",
+            "title": "Is Warmup"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/PrMark"
+            },
+            "type": "array",
+            "title": "Records"
+          }
+        },
+        "type": "object",
+        "required": [
+          "set_number",
+          "reps",
+          "weight_kg",
+          "rpe",
+          "is_warmup",
+          "records"
+        ],
+        "title": "LogSet"
       },
       "LoginCreate": {
         "properties": {
@@ -4624,6 +5165,82 @@
         "type": "object",
         "title": "PlanUpdate"
       },
+      "PrEvent": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Date"
+          },
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "e1rm",
+              "nrm",
+              "reps"
+            ],
+            "title": "Kind"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "session_id",
+          "kind",
+          "reps",
+          "value"
+        ],
+        "title": "PrEvent"
+      },
+      "PrMark": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "e1rm",
+              "nrm",
+              "reps"
+            ],
+            "title": "Kind"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "reps"
+        ],
+        "title": "PrMark"
+      },
       "PreviousExercise": {
         "properties": {
           "exercise_id": {
@@ -4932,6 +5549,72 @@
         ],
         "title": "RegisterCreate"
       },
+      "RepProfilePoint": {
+        "properties": {
+          "reps": {
+            "type": "integer",
+            "title": "Reps"
+          },
+          "actual_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Kg"
+          },
+          "actual_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Date"
+          },
+          "estimated_kg": {
+            "type": "number",
+            "title": "Estimated Kg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reps",
+          "actual_kg",
+          "actual_date",
+          "estimated_kg"
+        ],
+        "title": "RepProfilePoint"
+      },
+      "RepRanges": {
+        "properties": {
+          "strength": {
+            "type": "integer",
+            "title": "Strength"
+          },
+          "hypertrophy": {
+            "type": "integer",
+            "title": "Hypertrophy"
+          },
+          "endurance": {
+            "type": "integer",
+            "title": "Endurance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "strength",
+          "hypertrophy",
+          "endurance"
+        ],
+        "title": "RepRanges"
+      },
       "SessionCreate": {
         "properties": {
           "plan_day_id": {
@@ -5098,6 +5781,44 @@
               }
             ],
             "title": "Duration Sec"
+          },
+          "working_sets": {
+            "type": "integer",
+            "title": "Working Sets",
+            "default": 0
+          },
+          "max_rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Rpe"
+          },
+          "avg_rpe": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Rpe"
+          },
+          "max_reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Reps"
           }
         },
         "type": "object",
@@ -5108,7 +5829,11 @@
           "best_set",
           "e1rm",
           "nrm",
-          "duration_sec"
+          "duration_sec",
+          "working_sets",
+          "max_rpe",
+          "avg_rpe",
+          "max_reps"
         ],
         "title": "SessionMetrics"
       },
@@ -5977,6 +6702,35 @@
           "by_muscle_group"
         ],
         "title": "WeekOverview"
+      },
+      "WeeklyPoint": {
+        "properties": {
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "volume": {
+            "type": "number",
+            "title": "Volume"
+          },
+          "working_sets": {
+            "type": "integer",
+            "title": "Working Sets"
+          },
+          "sessions": {
+            "type": "integer",
+            "title": "Sessions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "week_start",
+          "volume",
+          "working_sets",
+          "sessions"
+        ],
+        "title": "WeeklyPoint"
       }
     }
   }

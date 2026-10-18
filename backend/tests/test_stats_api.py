@@ -100,3 +100,48 @@ def test_overview(alice, catalog):
 
 def test_stats_unknown_exercise_404(alice):
     assert alice.get(f"{API}/stats/exercises/9999/summary").status_code == 404
+
+
+def test_insights_and_log(alice, catalog):
+    ex = catalog["bench"]["id"]
+    log(alice, ex, 40, [(5, 90), (8, 60, True)])
+    log(alice, ex, 10, [(5, 95)])
+    log(alice, ex, 2, [(5, 100), (8, 70)])
+    ins = alice.get(f"{API}/stats/exercises/{ex}/insights").json()
+    assert ins["load_type"] == "weight"
+    assert len(ins["rep_profile"]) == 15 and ins["rep_profile"][0]["actual_kg"] == 100
+    assert ins["lifetime"]["total_sessions"] == 3
+    assert ins["lifetime"]["heaviest_set"] == {"reps": 5, "weight_kg": 100.0}
+    assert len(ins["training_days"]) == 3
+    assert ins["rep_ranges"]["strength"] == 3 and ins["rep_ranges"]["hypertrophy"] == 1
+    assert {e["kind"] for e in ins["pr_events"]} >= {"e1rm", "nrm"}
+    assert ins["plateau_weeks"] == 0
+
+    ranged = alice.get(
+        f"{API}/stats/exercises/{ex}/insights", params={"from": iso(5), "to": iso(0)}
+    ).json()
+    assert sum(w["sessions"] for w in ranged["weekly"]) == 1
+    assert ranged["lifetime"]["total_sessions"] == 3
+
+    page = alice.get(f"{API}/stats/exercises/{ex}/log", params={"limit": 2}).json()
+    assert len(page["items"]) == 2 and page["next_before"] is not None
+    newest = page["items"][0]
+    assert [x["weight_kg"] for x in newest["sets"]] == [100, 70]
+    assert any(m["kind"] == "e1rm" for m in newest["sets"][0]["records"])
+    assert newest["metrics"]["working_sets"] == 2 and newest["e1rm_delta_pct"] is not None
+    rest = alice.get(
+        f"{API}/stats/exercises/{ex}/log", params={"limit": 2, "before": page["next_before"]}
+    ).json()
+    assert len(rest["items"]) == 1 and rest["next_before"] is None
+    first = rest["items"][0]
+    assert first["sets"][1]["is_warmup"] is True and first["e1rm_delta_pct"] is None
+    assert all(not x["records"] for x in first["sets"])
+
+
+def test_insights_and_log_empty(alice, catalog):
+    ex = catalog["bench"]["id"]
+    ins = alice.get(f"{API}/stats/exercises/{ex}/insights").json()
+    assert ins["rep_profile"] == [] and ins["weekly"] == [] and ins["plateau_weeks"] is None
+    assert ins["lifetime"]["total_sessions"] == 0
+    log_ = alice.get(f"{API}/stats/exercises/{ex}/log").json()
+    assert log_["items"] == [] and log_["next_before"] is None
