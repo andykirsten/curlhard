@@ -3,13 +3,17 @@
 Aufwärmsätze zählen nie mit. Gewichte in kg.
 """
 
+import math
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
 RM_TARGETS = (5, 8, 13)
 RECORD_TARGETS = (1, 5, 8, 13)
-MAX_REPS_FOR_ESTIMATE = 15
+# Bis EPLEY_MAX_REPS gilt Epley, darüber bis MAX_REPS_FOR_ESTIMATE die flachere Mayhew-Kurve
+EPLEY_MAX_REPS = 15
+MAX_REPS_FOR_ESTIMATE = 30
+PROFILE_MAX_REPS = 15
 
 
 @dataclass(frozen=True)
@@ -35,16 +39,33 @@ def effective_load(load_type: str, weight_kg: float, body_weight_kg: float | Non
     return None  # time
 
 
+def _mayhew(reps: int) -> float:
+    """Mayhew et al. (1992): 1RM = w / (0,522 + 0,419 · e^(−0,055 · r))."""
+    return 1 / (0.522 + 0.419 * math.exp(-0.055 * reps))
+
+
+def rm_factor(reps: int) -> float:
+    """Verhältnis 1RM / Last bei `reps` Wiederholungen.
+
+    Bis 15 Wdh. Epley (1 + r/30). Epley wächst linear und überschätzt hohe
+    Wiederholungszahlen stark, deshalb verläuft die Kurve darüber nach Mayhew, die sich
+    asymptotisch abflacht. Sie ist an Epley bei 15 Wdh. angeschlossen (stetig, monoton).
+    """
+    if reps <= 1:
+        return 1.0
+    if reps <= EPLEY_MAX_REPS:
+        return 1 + reps / 30
+    return (1 + EPLEY_MAX_REPS / 30) * _mayhew(reps) / _mayhew(EPLEY_MAX_REPS)
+
+
 def e1rm(load: float, reps: int) -> float | None:
     if reps < 1 or reps > MAX_REPS_FOR_ESTIMATE or load <= 0:
         return None
-    if reps == 1:
-        return load
-    return load * (1 + reps / 30)
+    return load * rm_factor(reps)
 
 
 def nrm(e1: float, n: int) -> float:
-    return e1 / (1 + n / 30)
+    return e1 / rm_factor(n)
 
 
 def _working(sets: list[SetData]) -> list[SetData]:
@@ -235,12 +256,12 @@ def rep_profile(
     sets: list[SetData], load_type: str, bw: float | None, best_e1rm: float | None
 ) -> list[dict]:
     """Je 1–15 Wiederholungen: tatsächlicher Bestwert (Last bei mindestens n Wdh.) und
-    Epley-Schätzung aus dem besten e1RM. Leer für Zeitübungen oder ohne e1RM."""
+    Schätzung aus dem besten e1RM. Leer für Zeitübungen oder ohne e1RM."""
     if load_type == "time" or best_e1rm is None:
         return []
     working = _working(sets)
     out = []
-    for n in range(1, MAX_REPS_FOR_ESTIMATE + 1):
+    for n in range(1, PROFILE_MAX_REPS + 1):
         best: tuple[float, SetData] | None = None
         for s in working:
             if s.reps < n:

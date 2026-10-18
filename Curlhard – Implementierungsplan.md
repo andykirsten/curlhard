@@ -115,12 +115,21 @@ V = \sum_{\text{Sätze}} r_i \cdot w_i
 e1RM = w \cdot \left(1 + \frac{r}{30}\right)
 ```
 
-Pro Session zählt der Satz mit dem höchsten e1RM. Sätze mit mehr als 15 Wiederholungen fließen nicht in die Schätzung ein, weil die Formel dort stark streut.
+Pro Session zählt der Satz mit dem höchsten e1RM.
 
-**Geschätztes nRM** für n = 5, 8, 13, abgeleitet aus dem e1RM der Session:
+**Hohe Wiederholungszahlen (16–30):** Epley wächst linear und würde dort deutlich überschätzen (30 Wdh. ergäben das Doppelte der Last). Darüber gilt deshalb die Formel von Mayhew et al. (1992), die sich asymptotisch abflacht. Damit die Kurve keinen Sprung macht, ist sie bei 15 Wiederholungen an Epley angeschlossen:
 
 ```latex
-nRM = \frac{e1RM}{1 + \frac{n}{30}}
+f(r) = \begin{cases} 1 + \frac{r}{30} & r \le 15 \\ 1{,}5 \cdot \frac{M(r)}{M(15)} & 15 < r \le 30 \end{cases}
+\qquad M(r) = \frac{1}{0{,}522 + 0{,}419 \cdot e^{-0{,}055 r}}
+```
+
+e1RM = w · f(r). Werte bis 15 Wiederholungen bleiben damit unverändert. Beispiel: 40 kg × 20 Wdh. ergibt 64,0 kg (Epley: 66,7 kg), 40 kg × 30 Wdh. ergibt 70,3 kg (Epley: 80 kg). Sätze mit mehr als 30 Wiederholungen fließen nicht in die Schätzung ein (Ausdauerbereich, kaum Aussagekraft fürs Maximum); im Volumen und in den tatsächlichen Bestwerten zählen sie weiterhin.
+
+**Geschätztes nRM** für n = 5, 8, 13, abgeleitet aus dem e1RM der Session (Umkehrung derselben Kurve):
+
+```latex
+nRM = \frac{e1RM}{f(n)}
 ```
 
 Beispiel: 80 kg × 8 Wiederholungen ergibt ein e1RM von 101,3 kg, daraus 5RM 86,9 kg und 13RM 70,7 kg.

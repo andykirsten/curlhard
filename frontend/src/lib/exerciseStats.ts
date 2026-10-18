@@ -54,7 +54,7 @@ interface ProfileLike {
 
 /**
  * Nächstes PR-Ziel für n Wiederholungen: mindestens ein Schritt über dem echten Bestwert,
- * mindestens aber die gerundete Epley-Schätzung (liegt der Bestwert darunter, ist ein PR
+ * mindestens aber die gerundete e1RM-Schätzung (liegt der Bestwert darunter, ist ein PR
  * „leicht drin“). Null, wenn es keine Schätzung gibt.
  */
 export function prTarget(

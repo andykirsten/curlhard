@@ -14,6 +14,12 @@ const set = (reps: number, weight_kg: number, is_warmup = false) => ({ reps, wei
 describe('e1rm', () => {
   it('uses Epley', () => {
     expect(e1rm(60, 6)).toBeCloseTo(72)
+    expect(e1rm(50, 15)).toBeCloseTo(75)
+  })
+  it('flattens above 15 reps (Mayhew)', () => {
+    expect(e1rm(40, 20)).toBeCloseTo(64.0, 1)
+    expect(e1rm(40, 30)).toBeCloseTo(70.27, 1)
+    expect(e1rm(40, 30)).toBeLessThan(40 * 2)
   })
 })
 
