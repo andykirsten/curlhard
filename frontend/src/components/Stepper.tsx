@@ -1,5 +1,7 @@
 import { Minus, Plus } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { parseWeight } from '@/lib/weight'
 import { cn } from '@/lib/utils'
 
 interface StepperProps {
@@ -13,6 +15,14 @@ interface StepperProps {
   variant?: 'default' | 'dock'
   /** Sichtbares Kurzlabel (nur Variante dock), z. B. „Kilo“ */
   shortLabel?: string
+  /** Erlaubt Kommazahlen bei der Tastatureingabe (z. B. Gewicht) */
+  decimal?: boolean
+}
+
+function parseInput(input: string, decimal: boolean): number | null {
+  if (decimal) return parseWeight(input)
+  const trimmed = input.trim()
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : null
 }
 
 export function Stepper({
@@ -24,7 +34,11 @@ export function Stepper({
   format,
   variant = 'default',
   shortLabel,
+  decimal = false,
 }: StepperProps) {
+  // Während der Tastatureingabe zeigt das Feld den Rohtext (darf leer sein),
+  // sonst den formatierten Wert.
+  const [draft, setDraft] = useState<string | null>(null)
   const apply = (dir: 1 | -1) => {
     const next = Math.round((value + dir * step) * 1000) / 1000
     onChange(Math.max(min, next))
@@ -66,17 +80,33 @@ export function Stepper({
         >
           <Minus className="h-5 w-5" />
         </Button>
-        <output
+        <input
+          type="text"
+          inputMode={decimal ? 'decimal' : 'numeric'}
+          enterKeyHint="done"
+          autoComplete="off"
           aria-label={label}
           className={cn(
-            'text-center tabular-nums',
+            'rounded-md bg-transparent text-center tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-ring',
             dock
-              ? 'order-first col-span-2 min-w-0 whitespace-nowrap font-display text-[40px] leading-none md:order-none md:col-span-1 md:flex-1'
-              : 'min-w-[4.5rem] text-xl font-semibold',
+              ? 'order-first col-span-2 w-full min-w-0 font-display text-[40px] leading-none md:order-none md:col-span-1 md:flex-1'
+              : 'w-[4.5rem] text-xl font-semibold',
           )}
-        >
-          {format ? format(value) : value}
-        </output>
+          value={draft ?? (format ? format(value) : String(value))}
+          onFocus={(e) => {
+            setDraft(format ? format(value) : String(value))
+            e.target.select()
+          }}
+          onChange={(e) => {
+            setDraft(e.target.value)
+            const parsed = parseInput(e.target.value, decimal)
+            if (parsed !== null) onChange(Math.max(min, parsed))
+          }}
+          onBlur={() => setDraft(null)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+          }}
+        />
         <Button
           type="button"
           variant="secondary"

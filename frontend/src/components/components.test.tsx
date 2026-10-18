@@ -17,12 +17,29 @@ describe('Stepper', () => {
   })
 })
 
+describe('SetEntry keyboard input', () => {
+  it('accepts typed weight (with comma) and reps', async () => {
+    const onSubmit = vi.fn()
+    render(<SetEntry initialReps={8} initialWeight={60} weightStep={2.5} onSubmit={onSubmit} />)
+    const weight = screen.getByLabelText('Gewicht (kg)', { selector: 'input' })
+    const reps = screen.getByLabelText('Wiederholungen', { selector: 'input' })
+    await userEvent.clear(weight)
+    await userEvent.type(weight, '72,5')
+    await userEvent.clear(reps)
+    await userEvent.type(reps, '12')
+    await userEvent.tab()
+    expect(weight).toHaveValue('72,5')
+    await userEvent.click(screen.getByRole('button', { name: /Satz abhaken/ }))
+    expect(onSubmit).toHaveBeenCalledWith({ reps: 12, weight_kg: 72.5, is_warmup: false })
+  })
+})
+
 describe('SetEntry', () => {
   it('is prefilled with previous values and submits adjusted values', async () => {
     const onSubmit = vi.fn()
     render(<SetEntry initialReps={8} initialWeight={60} weightStep={2.5} onSubmit={onSubmit} />)
-    expect(screen.getByLabelText('Wiederholungen', { selector: 'output' })).toHaveTextContent('8')
-    expect(screen.getByLabelText('Gewicht (kg)', { selector: 'output' })).toHaveTextContent('60')
+    expect(screen.getByLabelText('Wiederholungen', { selector: 'input' })).toHaveValue('8')
+    expect(screen.getByLabelText('Gewicht (kg)', { selector: 'input' })).toHaveValue('60')
     await userEvent.click(screen.getByRole('button', { name: 'Gewicht (kg) erhöhen' }))
     await userEvent.click(screen.getByRole('button', { name: 'Wiederholungen verringern' }))
     await userEvent.click(screen.getByRole('button', { name: /Satz abhaken/ }))
@@ -47,7 +64,7 @@ describe('SetEntry', () => {
 
   it('shows a German decimal comma', () => {
     render(<SetEntry initialReps={5} initialWeight={62.5} weightStep={2.5} onSubmit={vi.fn()} />)
-    expect(screen.getByLabelText('Gewicht (kg)', { selector: 'output' })).toHaveTextContent('62,5')
+    expect(screen.getByLabelText('Gewicht (kg)', { selector: 'input' })).toHaveValue('62,5')
   })
 
   it('hides weight for time based exercises', () => {
@@ -61,7 +78,7 @@ describe('SetEntry', () => {
       />,
     )
     expect(screen.queryByText('Gewicht (kg)')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Sekunden', { selector: 'output' })).toHaveTextContent('30')
+    expect(screen.getByLabelText('Sekunden', { selector: 'input' })).toHaveValue('30')
   })
 })
 

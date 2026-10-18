@@ -52,6 +52,16 @@ test('Einladung → Registrierung → Plan → Workout loggen → Fortschritt', 
     await expect(page.getByText(name, { exact: true }).first()).toBeVisible()
   }
 
+  // Sätze im Editor per Tastatur ändern: bestehenden Wert löschen und neu tippen
+  await page.getByRole('button', { name: 'Schulterdrücken bearbeiten' }).click()
+  const sets = page.getByLabel('Sätze', { exact: true })
+  await sets.fill('')
+  await expect(sets).toHaveValue('')
+  await sets.pressSequentially('2')
+  await expect(sets).toHaveValue('2')
+  await page.getByRole('button', { name: 'Speichern' }).click()
+  await expect(page.getByText(/^2 × /).first()).toBeVisible()
+
   // --- Heute: Plan-Tag erscheint, Workout starten ---
   await page.getByRole('link', { name: 'Heute', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Push', exact: true })).toBeVisible()
@@ -73,9 +83,13 @@ test('Einladung → Registrierung → Plan → Workout loggen → Fortschritt', 
 
   // Pause beenden, damit das Eingabe-Dock wieder frei ist
   await page.getByRole('button', { name: 'Weiter', exact: true }).click()
+  // Werte per Tastatur eingeben
+  await page.getByRole('textbox', { name: 'Gewicht (kg)' }).fill('22,5')
+  await page.getByRole('textbox', { name: 'Wiederholungen' }).fill('6')
+  await expect(page.getByTestId('active-row')).toContainText('6 × 22,5 kg')
   await page.getByRole('button', { name: /Satz abhaken/ }).click()
   await expect(doneRows).toHaveCount(2)
-  await expect(doneRows.nth(1)).toContainText('8 × 25 kg')
+  await expect(doneRows.nth(1)).toContainText('6 × 22,5 kg')
 
   // --- Training beenden, im Verlauf auffindbar ---
   await page.getByRole('button', { name: 'Beenden' }).click()
