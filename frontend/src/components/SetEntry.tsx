@@ -53,6 +53,7 @@ export function SetEntry({
             onChange={setWeight}
             step={weightStep}
             format={formatWeight}
+            decimal
           />
         )}
       </div>

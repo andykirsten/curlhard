@@ -43,6 +43,7 @@ export function InputDock({
               onChange={onWeight}
               step={weightStep}
               format={formatWeight}
+              decimal
             />
           )}
           <Stepper

@@ -108,23 +108,39 @@ function ExerciseEditor({
   onClose: () => void
   onSave: (v: Partial<PlanExerciseRead>) => void
 }) {
+  // Zahlenfelder als Text halten, damit sie beim Tippen auch leer sein dürfen.
   const [v, setV] = useState({
-    target_sets: pe.target_sets,
-    target_reps_min: pe.target_reps_min,
-    target_reps_max: pe.target_reps_max,
-    target_rest_sec: pe.target_rest_sec,
-    note: pe.note,
+    target_sets: String(pe.target_sets),
+    target_reps_min: String(pe.target_reps_min),
+    target_reps_max: String(pe.target_reps_max),
+    target_rest_sec: String(pe.target_rest_sec),
   })
+  const [note, setNote] = useState(pe.note)
+  const minimum: Record<keyof typeof v, number> = {
+    target_sets: 1,
+    target_reps_min: 1,
+    target_reps_max: 1,
+    target_rest_sec: 0,
+  }
+  const parsed = Object.fromEntries(
+    (Object.keys(v) as (keyof typeof v)[]).map((key) => {
+      const raw = v[key].trim()
+      const n = /^\d+$/.test(raw) ? Number(raw) : NaN
+      return [key, n >= minimum[key] ? n : null]
+    }),
+  ) as Record<keyof typeof v, number | null>
+  const valid = Object.values(parsed).every((n) => n !== null)
   const num = (key: keyof typeof v, label: string) => (
     <div className="space-y-1">
       <Label htmlFor={key}>{label}</Label>
       <Input
         id={key}
-        type="number"
+        type="text"
         inputMode="numeric"
-        min={0}
-        value={v[key] as number}
-        onChange={(e) => setV({ ...v, [key]: Number(e.target.value) })}
+        autoComplete="off"
+        aria-invalid={parsed[key] === null}
+        value={v[key]}
+        onChange={(e) => setV({ ...v, [key]: e.target.value.replace(/\D/g, '') })}
       />
     </div>
   )
@@ -141,14 +157,22 @@ function ExerciseEditor({
           <Label htmlFor="pe-note">Notiz</Label>
           <Input
             id="pe-note"
-            value={v.note}
-            onChange={(e) => setV({ ...v, note: e.target.value })}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
           />
         </div>
         <Button
           className="w-full"
+          disabled={!valid}
           onClick={() => {
-            onSave(v)
+            if (!valid) return
+            onSave({
+              target_sets: parsed.target_sets!,
+              target_reps_min: parsed.target_reps_min!,
+              target_reps_max: parsed.target_reps_max!,
+              target_rest_sec: parsed.target_rest_sec!,
+              note,
+            })
             onClose()
           }}
         >
