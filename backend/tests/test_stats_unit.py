@@ -23,8 +23,8 @@ def test_e1rm_single_rep_equals_weight():
     assert stats.e1rm(100, 1) == 100
 
 
-def test_e1rm_excluded_above_15_reps_or_invalid():
-    assert stats.e1rm(50, 16) is None
+def test_e1rm_excluded_above_30_reps_or_invalid():
+    assert stats.e1rm(50, 31) is None
     assert stats.e1rm(50, 15) == pytest.approx(75)
     assert stats.e1rm(50, 0) is None
     assert stats.e1rm(0, 5) is None
@@ -53,14 +53,37 @@ def test_warmups_never_count():
     assert stats.session_metrics([s(1, 1, 10, 40, warm=True)], "weight", None) is None
 
 
-def test_sets_over_15_reps_in_volume_but_not_estimate():
-    m = stats.session_metrics([s(1, 1, 20, 40), s(1, 1, 5, 60)], "weight", None)
-    assert m["volume"] == 20 * 40 + 5 * 60
+def test_high_rep_factor_continuous_monotonic_and_flatter_than_epley():
+    factors = [stats.rm_factor(r) for r in range(1, 31)]
+    assert all(b > a for a, b in zip(factors, factors[1:], strict=False))
+    assert stats.rm_factor(15) == pytest.approx(1.5)
+    assert stats.rm_factor(16) - stats.rm_factor(15) < 1 / 30
+    assert stats.rm_factor(20) == pytest.approx(1.600, abs=0.001)
+    assert stats.rm_factor(30) == pytest.approx(1.757, abs=0.001)
+    assert stats.rm_factor(30) < 1 + 30 / 30
+
+
+def test_nrm_inverts_e1rm_for_high_reps():
+    e = stats.e1rm(40, 25)
+    assert e is not None
+    assert stats.nrm(e, 25) == pytest.approx(40)
+
+
+def test_sets_over_30_reps_in_volume_but_not_estimate():
+    m = stats.session_metrics([s(1, 1, 35, 30), s(1, 1, 5, 60)], "weight", None)
+    assert m["volume"] == 35 * 30 + 5 * 60
     assert m["e1rm"] == pytest.approx(60 * (1 + 5 / 30), abs=0.01)
 
 
-def test_only_high_rep_sets_have_no_e1rm():
+def test_high_rep_sets_count_towards_e1rm():
     m = stats.session_metrics([s(1, 1, 20, 40)], "weight", None)
+    assert m["e1rm"] == pytest.approx(40 * stats.rm_factor(20), abs=0.01)
+    assert m["best_set"] == {"reps": 20, "weight_kg": 40}
+    assert m["nrm"][5] == pytest.approx(m["e1rm"] / (1 + 5 / 30), abs=0.01)
+
+
+def test_only_very_high_rep_sets_have_no_e1rm():
+    m = stats.session_metrics([s(1, 1, 40, 20)], "weight", None)
     assert m["e1rm"] is None and m["nrm"] == {} and m["volume"] == 800
 
 

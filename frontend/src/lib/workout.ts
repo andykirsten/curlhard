@@ -1,9 +1,16 @@
 import { formatDate } from '@/lib/dates'
 import { formatWeight } from '@/lib/weight'
 
-/** Geschätztes Maximum nach Epley (wie in backend/app/services/stats.py) */
+const mayhew = (reps: number) => 1 / (0.522 + 0.419 * Math.exp(-0.055 * reps))
+
+/**
+ * Geschätztes Maximum wie in backend/app/services/stats.py: bis 15 Wdh. Epley, darüber die
+ * an Epley angeschlossene, flachere Mayhew-Kurve (bei mehr als 30 Wdh. auf 30 begrenzt).
+ */
 export function e1rm(weight: number, reps: number): number {
-  return weight * (1 + reps / 30)
+  if (reps <= 1) return weight
+  if (reps <= 15) return weight * (1 + reps / 30)
+  return (weight * 1.5 * mayhew(Math.min(reps, 30))) / mayhew(15)
 }
 
 interface SetLike {

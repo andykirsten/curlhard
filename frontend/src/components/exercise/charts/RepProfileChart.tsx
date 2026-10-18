@@ -15,7 +15,7 @@ import { ChartTooltip } from './shared'
 import { AXIS_TICK, COLORS } from './theme'
 
 /**
- * Rep-Max-Profil: Balken = echter Bestwert (Last bei mindestens n Wdh.), Linie = Epley-Kurve
+ * Rep-Max-Profil: Balken = echter Bestwert (Last bei mindestens n Wdh.), Linie = Schätzkurve
  * aus dem besten e1RM. Lücken zwischen Balken und Kurve (>= 3 %) sind golden hervorgehoben:
  * dort ist ein PR „leicht drin“.
  */
