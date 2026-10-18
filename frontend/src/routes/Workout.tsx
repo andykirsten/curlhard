@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from '@tanstack/react-router'
-import { MoreHorizontal, Plus } from 'lucide-react'
+import { Check, Flame, MoreHorizontal, Plus } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -38,11 +38,15 @@ import { Sheet } from '@/components/ui/sheet'
 import { ExercisePeekSheet } from '@/components/workout/ExercisePeekSheet'
 import { ExerciseStrip } from '@/components/workout/ExerciseStrip'
 import { KlimentOverlay } from '@/components/workout/KlimentOverlay'
+import { PlateSheet } from '@/components/workout/PlateSheet'
 import { InputDock } from '@/components/workout/InputDock'
 import { SetTable, type ActiveRow } from '@/components/workout/SetTable'
 import { VolumeBar } from '@/components/workout/VolumeBar'
 import { WorkoutHeader } from '@/components/workout/WorkoutHeader'
+import { plateLoad, plateSummary } from '@/lib/plates'
 import { errorMessage } from '@/lib/query'
+import { useBarWeight } from '@/lib/useBarWeight'
+import { warmupSets } from '@/lib/warmup'
 import { formatWeight } from '@/lib/weight'
 import { compareLabel, e1rm, exerciseProgress, exerciseVolume } from '@/lib/workout'
 import { useActiveSession } from '@/stores/activeSession'
@@ -198,6 +202,7 @@ function ExerciseFocus({
 }) {
   const queryClient = useQueryClient()
   const weightStep = useSettings((s) => s.weightStep)
+  const plates = useSettings((s) => s.plates)
   const startRest = useActiveSession((s) => s.startRest)
   const key = getGetSessionDetailQueryKey(session.id)
   const addSet = useAddSet()
@@ -215,6 +220,11 @@ function ExerciseFocus({
   const [menuOpen, setMenuOpen] = useState(false)
   const [peekOpen, setPeekOpen] = useState(false)
   const [editing, setEditing] = useState<SetRead | null>(null)
+  const [platesOpen, setPlatesOpen] = useState(false)
+  // Arbeitsgewicht, für das Aufwärmsätze vorgeschlagen werden (null = kein Vorschlag aktiv)
+  const [warmupTarget, setWarmupTarget] = useState<number | null>(null)
+  const [warmupHidden, setWarmupHidden] = useState(false)
+  const { bar, setting } = useBarWeight(se.exercise_id, loadType === 'weight')
 
   const working = se.sets.filter((s) => !s.is_warmup)
   const lastSet = working.at(-1)
@@ -224,16 +234,27 @@ function ExerciseFocus({
     ? { reps: source.reps, weight: source.weight_kg }
     : { reps: fallback?.reps ?? 8, weight: fallback?.weight_kg ?? 20 }
 
+  // Aufwärmen: nur vor dem ersten Arbeitssatz; danach wird das Zielgewicht vorbelegt
+  const canWarmup = loadType === 'weight' && !finished && working.length === 0
+  const warmupPlan =
+    canWarmup && warmupTarget != null ? warmupSets(warmupTarget, bar, weightStep) : []
+  const warmupsDone = se.sets.length - working.length
+  const nextWarmup = warmupHidden ? undefined : warmupPlan[warmupsDone]
+  const start = nextWarmup
+    ? { reps: nextWarmup.reps, weight: nextWarmup.weight_kg, warmup: true }
+    : { reps: prefill.reps, weight: warmupTarget ?? prefill.weight, warmup: false }
+
   // Dock-Werte: werden nach jedem Satz (bzw. wenn Vergleichsdaten eintreffen) neu vorbelegt
-  const seedKey = `${se.id}:${se.sets.length}:${prevSets.length}:${fallback ? 1 : 0}`
+  const seedKey = `${se.id}:${se.sets.length}:${prevSets.length}:${fallback ? 1 : 0}:${warmupTarget ?? ''}`
   const [seed, setSeed] = useState(seedKey)
-  const [weight, setWeight] = useState(prefill.weight)
-  const [reps, setReps] = useState(prefill.reps)
-  const [warmup, setWarmup] = useState(false)
+  const [weight, setWeight] = useState(start.weight)
+  const [reps, setReps] = useState(start.reps)
+  const [warmup, setWarmup] = useState(start.warmup)
   if (seed !== seedKey) {
     setSeed(seedKey)
-    setWeight(prefill.weight)
-    setReps(prefill.reps)
+    setWeight(start.weight)
+    setReps(start.reps)
+    setWarmup(start.warmup)
   }
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: key })
@@ -425,6 +446,64 @@ function ExerciseFocus({
         >
           {prevLabel}
         </p>
+        {warmupPlan.length > 0 && !warmupHidden && (
+          <div className="mb-2 flex flex-wrap items-center gap-1.5" data-testid="warmup-plan">
+            <span className="mr-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+              Aufwärmen
+            </span>
+            {warmupPlan.map((w, i) => {
+              const done = i < warmupsDone
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`Aufwärmsatz ${w.reps} × ${formatWeight(w.weight_kg)} kg${done ? ', erledigt' : ''}`}
+                  className={`flex items-center gap-1 rounded-full border px-2.5 py-1 text-sm font-semibold tabular-nums ${
+                    done
+                      ? 'border-transparent bg-secondary text-muted-foreground line-through'
+                      : i === warmupsDone
+                        ? 'border-primary text-primary'
+                        : 'border-border'
+                  }`}
+                  onClick={() => {
+                    setWeight(w.weight_kg)
+                    setReps(w.reps)
+                    setWarmup(true)
+                  }}
+                >
+                  {done && <Check className="h-3.5 w-3.5" aria-hidden />}
+                  {w.reps} × {formatWeight(w.weight_kg)}
+                </button>
+              )
+            })}
+            <button
+              type="button"
+              className="ml-auto text-xs font-semibold text-muted-foreground"
+              onClick={() => {
+                // Zurück zum Arbeitssatz, ohne die Vorbelegung neu auszulösen
+                setWarmupHidden(true)
+                setWeight(warmupTarget ?? prefill.weight)
+                setReps(prefill.reps)
+                setWarmup(false)
+              }}
+            >
+              Ausblenden
+            </button>
+          </div>
+        )}
+        {canWarmup &&
+          warmupTarget == null &&
+          !warmup &&
+          warmupSets(weight, bar, weightStep).length > 0 && (
+            <button
+              type="button"
+              className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-primary"
+              onClick={() => setWarmupTarget(weight)}
+            >
+              <Flame className="h-4 w-4" aria-hidden /> Aufwärmen für {formatWeight(weight)} kg
+              vorschlagen
+            </button>
+          )}
         <SetTable
           sets={se.sets}
           prevSets={prevSets}
@@ -446,6 +525,14 @@ function ExerciseFocus({
           onWeight={setWeight}
           onReps={setReps}
           onWarmup={setWarmup}
+          plates={
+            bar != null && plates.length > 0
+              ? {
+                  summary: plateSummary(bar, plateLoad(weight, bar, plates)),
+                  onOpen: () => setPlatesOpen(true),
+                }
+              : undefined
+          }
           onSubmit={() =>
             void log({
               reps,
@@ -477,6 +564,18 @@ function ExerciseFocus({
         </div>
       </Sheet>
 
+      {loadType === 'weight' && (
+        <PlateSheet
+          open={platesOpen}
+          onOpenChange={setPlatesOpen}
+          exerciseId={se.exercise_id}
+          name={name}
+          weight={weight}
+          plates={plates}
+          setting={setting}
+        />
+      )}
+
       <ExercisePeekSheet
         open={peekOpen}
         onOpenChange={setPeekOpen}
@@ -496,6 +595,17 @@ function ExerciseFocus({
           >
             Übungsdetails
           </Button>
+          {loadType === 'weight' && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMenuOpen(false)
+                setPlatesOpen(true)
+              }}
+            >
+              Scheibenrechner &amp; Stange
+            </Button>
+          )}
           {!finished && (
             <Button
               variant="outline"

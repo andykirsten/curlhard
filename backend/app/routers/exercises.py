@@ -9,12 +9,15 @@ from app.models import (
     Exercise,
     ExerciseNote,
     ExerciseSecondaryMuscle,
+    ExerciseSetting,
     MuscleGroup,
 )
 from app.repositories.common import get_visible_exercise
 from app.schemas.exercises import (
     ExerciseCreate,
     ExerciseRead,
+    ExerciseSettingRead,
+    ExerciseSettingUpdate,
     ExerciseUpdate,
     NamedCreate,
     NamedRead,
@@ -261,3 +264,53 @@ def put_note(exercise_id: int, body: NoteUpdate, user: CurrentUser, db: DbSessio
     db.add(note)
     db.commit()
     return NoteRead(exercise_id=exercise_id, note=body.note)
+
+
+# ---- Persönliche Übungs-Einstellungen ------------------------------------------------------
+
+# Standard-Stangengewicht nach Equipment; andere Equipments haben keinen Scheibenrechner
+DEFAULT_BAR_WEIGHT_KG = {"Langhantel": 20.0, "SZ-Stange": 10.0}
+
+
+def _default_bar_weight(db: Session, ex: Exercise) -> float | None:
+    if ex.equipment_id is None:
+        return None
+    equipment = db.get(Equipment, ex.equipment_id)
+    return DEFAULT_BAR_WEIGHT_KG.get(equipment.name) if equipment else None
+
+
+def _get_setting(db: Session, user_id: int, exercise_id: int) -> ExerciseSetting | None:
+    return db.exec(
+        select(ExerciseSetting).where(
+            ExerciseSetting.user_id == user_id, ExerciseSetting.exercise_id == exercise_id
+        )
+    ).first()
+
+
+@router.get("/exercises/{exercise_id}/setting", response_model=ExerciseSettingRead)
+def get_exercise_setting(exercise_id: int, user: CurrentUser, db: DbSession):
+    ex = get_visible_exercise(db, exercise_id, user.id)  # type: ignore[arg-type]
+    setting = _get_setting(db, user.id, exercise_id)  # type: ignore[arg-type]
+    return ExerciseSettingRead(
+        exercise_id=exercise_id,
+        bar_weight_kg=setting.bar_weight_kg if setting else None,
+        default_bar_weight_kg=_default_bar_weight(db, ex),
+    )
+
+
+@router.put("/exercises/{exercise_id}/setting", response_model=ExerciseSettingRead)
+def put_exercise_setting(
+    exercise_id: int, body: ExerciseSettingUpdate, user: CurrentUser, db: DbSession
+):
+    ex = get_visible_exercise(db, exercise_id, user.id)  # type: ignore[arg-type]
+    setting = _get_setting(db, user.id, exercise_id)  # type: ignore[arg-type]
+    if setting is None:
+        setting = ExerciseSetting(user_id=user.id, exercise_id=exercise_id)  # type: ignore[arg-type]
+    setting.bar_weight_kg = body.bar_weight_kg
+    db.add(setting)
+    db.commit()
+    return ExerciseSettingRead(
+        exercise_id=exercise_id,
+        bar_weight_kg=body.bar_weight_kg,
+        default_bar_weight_kg=_default_bar_weight(db, ex),
+    )

@@ -17,6 +17,7 @@ export function InputDock({
   onReps,
   onWarmup,
   onSubmit,
+  plates,
 }: {
   weight: number
   reps: number
@@ -28,11 +29,23 @@ export function InputDock({
   onReps: (v: number) => void
   onWarmup: (v: boolean) => void
   onSubmit: () => void
+  /** Scheibenrechner-Zeile über den Steppern (nur mit Stangengewicht) */
+  plates?: { summary: string; onOpen: () => void }
 }) {
   const isTime = loadType === 'time'
   return (
     <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-xl md:max-w-2xl rounded-t-[28px] border-t bg-card px-4 pb-4 pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.12)]">
       <div className="flex flex-col gap-2.5">
+        {plates && !isTime && (
+          <button
+            type="button"
+            aria-label={`Scheibenrechner: ${plates.summary}`}
+            className="-mb-1 truncate text-left text-xs font-semibold tabular-nums text-muted-foreground"
+            onClick={plates.onOpen}
+          >
+            {plates.summary} ›
+          </button>
+        )}
         <div className={`grid gap-2.5 ${isTime ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {!isTime && (
             <Stepper

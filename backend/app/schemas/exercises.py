@@ -58,3 +58,16 @@ class NoteUpdate(BaseModel):
 class NoteRead(BaseModel):
     exercise_id: int
     note: str
+
+
+class ExerciseSettingUpdate(BaseModel):
+    #: None setzt auf den Standard des Equipments zurück
+    bar_weight_kg: float | None = Field(default=None, ge=0, le=100)
+
+
+class ExerciseSettingRead(BaseModel):
+    exercise_id: int
+    #: Eigener Wert des Users, None = nicht gesetzt
+    bar_weight_kg: float | None
+    #: Standard aus dem Equipment (Langhantel 20 kg, SZ-Stange 10 kg), sonst None
+    default_bar_weight_kg: float | None

@@ -184,3 +184,14 @@ class ExerciseNote(Base, table=True):
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
     exercise_id: int = Field(foreign_key="exercise.id", ondelete="CASCADE")
     note: str = ""
+
+
+class ExerciseSetting(Base, table=True):
+    """Persönliche Einstellungen eines Users zu einer Übung (z. B. Stangengewicht)."""
+
+    __tablename__ = "exercise_setting"
+    __table_args__ = (UniqueConstraint("user_id", "exercise_id"),)
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE")
+    exercise_id: int = Field(foreign_key="exercise.id", ondelete="CASCADE")
+    #: None = Standard aus dem Equipment der Übung
+    bar_weight_kg: float | None = None

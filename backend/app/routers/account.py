@@ -10,6 +10,7 @@ from app.models import (
     Exercise,
     ExerciseNote,
     ExerciseSecondaryMuscle,
+    ExerciseSetting,
     InviteCode,
     Plan,
     PlanDay,
@@ -59,6 +60,7 @@ def export_data(user: CurrentUser, db: DbSession):
         "session_exercises": _rows(db, SessionExercise, user_id=uid),
         "sets": _rows(db, SetLog, user_id=uid),
         "exercise_notes": _rows(db, ExerciseNote, user_id=uid),
+        "exercise_settings": _rows(db, ExerciseSetting, user_id=uid),
         "training_cycles": _rows(db, TrainingCycle, user_id=uid),
         # Avatar-Bytes bewusst nicht im Export, nur das Vorhandensein
         "has_avatar": db.exec(select(UserAvatar.id).where(UserAvatar.user_id == uid)).first()  # type: ignore[arg-type]
@@ -79,6 +81,7 @@ def delete_account(body: AccountDelete, user: CurrentUser, db: DbSession, settin
     db.execute(delete(TrainingCycle).where(TrainingCycle.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(UserAvatar).where(UserAvatar.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(ExerciseNote).where(ExerciseNote.user_id == uid))  # type: ignore[arg-type]
+    db.execute(delete(ExerciseSetting).where(ExerciseSetting.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(PlanExercise).where(PlanExercise.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(PlanDay).where(PlanDay.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(Plan).where(Plan.user_id == uid))  # type: ignore[arg-type]

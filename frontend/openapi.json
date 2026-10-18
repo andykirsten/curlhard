@@ -1011,6 +1011,98 @@
         }
       }
     },
+    "/api/v1/exercises/{exercise_id}/setting": {
+      "get": {
+        "tags": [
+          "exercises"
+        ],
+        "summary": "Get Exercise Setting",
+        "operationId": "get_exercise_setting",
+        "parameters": [
+          {
+            "name": "exercise_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Exercise Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseSettingRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "exercises"
+        ],
+        "summary": "Put Exercise Setting",
+        "operationId": "put_exercise_setting",
+        "parameters": [
+          {
+            "name": "exercise_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Exercise Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExerciseSettingUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExerciseSettingRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/plans": {
       "get": {
         "tags": [
@@ -3856,6 +3948,62 @@
           "is_active"
         ],
         "title": "ExerciseRead"
+      },
+      "ExerciseSettingRead": {
+        "properties": {
+          "exercise_id": {
+            "type": "integer",
+            "title": "Exercise Id"
+          },
+          "bar_weight_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bar Weight Kg"
+          },
+          "default_bar_weight_kg": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Bar Weight Kg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exercise_id",
+          "bar_weight_kg",
+          "default_bar_weight_kg"
+        ],
+        "title": "ExerciseSettingRead"
+      },
+      "ExerciseSettingUpdate": {
+        "properties": {
+          "bar_weight_kg": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bar Weight Kg"
+          }
+        },
+        "type": "object",
+        "title": "ExerciseSettingUpdate"
       },
       "ExerciseUpdate": {
         "properties": {

@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input'
 import { Segmented } from '@/components/ui/segmented'
 import { Label } from '@/components/ui/label'
 import { resizeAvatar } from '@/lib/avatar'
+import { ALL_PLATES } from '@/lib/plates'
 import { errorMessage } from '@/lib/query'
 import { formatWeight, parseWeight } from '@/lib/weight'
 import { useActiveSession } from '@/stores/activeSession'
@@ -229,6 +230,40 @@ export function SettingsPage() {
               ]}
               onChange={(v) => settings.set({ weightStep: Number(v) as 1.25 | 2.5 })}
             />
+          </div>
+          <div className="space-y-2">
+            <Label id="plates-label">Vorhandene Scheiben</Label>
+            <div
+              role="group"
+              aria-labelledby="plates-label"
+              className="grid grid-cols-5 gap-1 rounded-lg bg-secondary p-1"
+            >
+              {ALL_PLATES.map((p) => {
+                const on = settings.plates.includes(p)
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    aria-pressed={on}
+                    className={`rounded-md px-1 py-1.5 text-sm font-medium tabular-nums ${
+                      on ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                    }`}
+                    onClick={() =>
+                      settings.set({
+                        plates: on
+                          ? settings.plates.filter((x) => x !== p)
+                          : [...settings.plates, p].sort((a, b) => b - a),
+                      })
+                    }
+                  >
+                    {formatWeight(p)}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Für den Scheibenrechner im Training. Das Stangengewicht stellst du pro Übung ein.
+            </p>
           </div>
           <div className="space-y-2">
             <Label id="theme-label">Darstellung</Label>
