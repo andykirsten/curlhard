@@ -62,6 +62,21 @@ einem eigenen Server-Block; bestehende Dienste (z. B. BWMS) bleiben unberührt. 
 4. Backup per Host-Cron: `deploy/backup.sh` (`pg_dump -Fc` nach `/var/backups/curlhard`); Update: `deploy/deploy.sh`.
    Restore: `docker compose exec -T db pg_restore -U curlhard -d curlhard --clean --if-exists < curlhard-<STAMP>.dump`.
 
+### Eigene Domain per Cloudflare Tunnel
+
+Alternative zum Host-Nginx, wenn dieser nicht angefasst werden soll (live für `curlhard.com`): Der Dienst
+`tunnel` (`cloudflared`) baut eine ausgehende Verbindung zu Cloudflare auf; TLS und DNS übernimmt Cloudflare,
+es wird kein Port geöffnet.
+
+1. Im Cloudflare-Dashboard (Zero Trust → Networks → Tunnels) einen Tunnel anlegen, Umgebung „Docker“, Token kopieren.
+2. In `deploy/.env`: `COMPOSE_PROFILES=tunnel`, `CLOUDFLARE_TUNNEL_TOKEN=<Token>` und die Domain(s) in
+   `ALLOWED_ORIGINS` ergänzen, dann `docker compose up -d`.
+3. Public Hostnames des Tunnels (z. B. `curlhard.com`, `www.curlhard.com`) mit Service-URL `http://web:80` anlegen;
+   die DNS-Einträge erzeugt Cloudflare selbst.
+
+Die echte Client-IP kommt über `X-Forwarded-For` an (der `web`-Container vertraut dem Docker-Netz), das
+Login-Rate-Limit greift also weiterhin pro Client.
+
 ### Einmalige Übernahme der alten SQLite-Datenbank
 
 Erst nach dem Merge auf `main` (CI baut die Postgres-fähigen Images). Neue `compose.yaml`, `backup.sh`,
