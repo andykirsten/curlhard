@@ -1,12 +1,31 @@
 services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: curlhard
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD in deploy/.env setzen}
+      POSTGRES_DB: curlhard
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U curlhard -d curlhard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging: &log
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
   api:
     image: ghcr.io/${GHCR_OWNER:-owner}/curlhard-api:${CURLHARD_TAG:-latest}
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://curlhard:${POSTGRES_PASSWORD}@db:5432/curlhard
+    depends_on:
+      db: { condition: service_healthy }
     read_only: true
     tmpfs: [/tmp]
-    volumes:
-      - data:/data
-      - /var/backups/curlhard:/backups
     healthcheck:
       test:
         [
@@ -19,9 +38,7 @@ services:
       timeout: 5s
       retries: 3
     restart: unless-stopped
-    logging: &log
-      driver: json-file
-      options: { max-size: "10m", max-file: "3" }
+    logging: *log
 
   web:
     image: ghcr.io/${GHCR_OWNER:-owner}/curlhard-web:${CURLHARD_TAG:-latest}
@@ -33,4 +50,4 @@ services:
     logging: *log
 
 volumes:
-  data:
+  pgdata:

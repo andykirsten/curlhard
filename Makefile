@@ -1,7 +1,11 @@
-.PHONY: dev api-client migrate up test lint seed
+.PHONY: dev db api-client migrate up test lint seed
+
+# Lokale Postgres-Datenbank (docker-compose.dev.yaml)
+db:
+	docker compose -f docker-compose.dev.yaml up -d --wait db
 
 # Uvicorn (8000) und Vite (5173, Proxy /api -> 8000)
-dev:
+dev: db
 	cd backend && uv run alembic upgrade head
 	cd backend && COOKIE_SECURE=false ALLOWED_ORIGINS='["http://localhost:5173"]' uv run uvicorn app.main:app --reload --port 8000 & \
 	cd frontend && npm run dev

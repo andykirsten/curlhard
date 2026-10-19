@@ -1,6 +1,6 @@
 # Curlhard
 
-Selbst gehosteter Workout-Tracker als PWA (FastAPI + SQLite, Vite/React/TypeScript).
+Selbst gehosteter Workout-Tracker als PWA (FastAPI + PostgreSQL, Vite/React/TypeScript).
 Konzept und Architektur: `Curlhard – Implementierungsplan.md`.
 
 ## Entwicklung
@@ -25,7 +25,7 @@ Nach jeder API-Änderung den Client neu erzeugen: `make api-client`
 
 | Bereich | Befehl |
 | --- | --- |
-| Backend (pytest, In-Memory-SQLite) | `cd backend && uv run ruff check . && uv run mypy app && uv run pytest` |
+| Backend (pytest gegen Postgres, `make db` startet sie; andere DB über `TEST_DATABASE_URL`) | `cd backend && uv run ruff check . && uv run mypy app && uv run pytest` |
 | Frontend (Vitest, Typecheck, Lint) | `cd frontend && npm run lint && npm run typecheck && npm test` |
 | Build + iOS-15-CSS-Check | `cd frontend && npm run build && npm run check:compat` |
 | E2E (Playwright, startet Backend + Vite selbst) | `cd frontend && npx playwright install chromium && npm run e2e` |
@@ -53,13 +53,39 @@ Der `web`-Container lauscht nur auf `127.0.0.1:8080` (HTTP). TLS terminiert ein 
 einem eigenen Server-Block; bestehende Dienste (z. B. BWMS) bleiben unberührt. Ohne eigene Domain dient
 `<IP-mit-Bindestrichen>.sslip.io` als Hostname (z. B. `203-0-113-5.sslip.io`).
 
-1. `deploy/.env` aus `.env.example` anlegen (`chmod 600`), `GHCR_OWNER`, `SECRET_KEY`, `ALLOWED_ORIGINS` (mit sslip-Hostnamen) setzen.
+1. `deploy/.env` aus `.env.example` anlegen (`chmod 600`), `GHCR_OWNER`, `SECRET_KEY`, `POSTGRES_PASSWORD`, `ALLOWED_ORIGINS` (mit sslip-Hostnamen) setzen.
 2. `docker compose up -d`, dann einmalig `docker compose run --rm --no-deps --entrypoint python api -m app.seed` und
    `docker compose run --rm --no-deps --entrypoint python api -m app.create_admin EMAIL PASSWORT NAME`.
 3. Host-Nginx: `deploy/nginx-host.conf.example` nach `/etc/nginx/sites-available/curlhard`, Platzhalter ersetzen,
    Zertifikat per Host-Certbot (`certbot certonly --webroot -w /var/www/certbot -d <HOST>`), `nginx -t && systemctl reload nginx`.
    Hetzner-Firewall: 443 freigeben.
-4. Backup per Host-Cron: `deploy/backup.sh`; Update: `deploy/deploy.sh`.
+4. Backup per Host-Cron: `deploy/backup.sh` (`pg_dump -Fc` nach `/var/backups/curlhard`); Update: `deploy/deploy.sh`.
+   Restore: `docker compose exec -T db pg_restore -U curlhard -d curlhard --clean --if-exists < curlhard-<STAMP>.dump`.
+
+### Einmalige Übernahme der alten SQLite-Datenbank
+
+Erst nach dem Merge auf `main` (CI baut die Postgres-fähigen Images). Neue `compose.yaml`, `backup.sh`,
+`migrate-to-postgres.sh` nach `/opt/curlhard/deploy` kopieren, `POSTGRES_PASSWORD` in `.env` ergänzen, dann
+`./migrate-to-postgres.sh`: neue Images ziehen, SQLite sichern (`/var/backups/curlhard/vor-postgres-*.db`),
+`web`/`api` stoppen, Schema anlegen, Daten importieren (Zeilenzahlen werden verglichen, ID-Sequenzen gesetzt,
+Quelle darf auf Revision 0005 stehen), Stack starten. Das Volume `deploy_data` bleibt unverändert als Rollback.
+Danach Login prüfen und den Restore einmal in einer Wegwerf-Datenbank testen. Echte Daten gehören nie ins
+Image (GHCR ist öffentlich), sie liegen im Volume `pgdata`.
+
+### FitNotes-Import
+
+`backend/app/import_fitnotes.py` überträgt ein FitNotes-Backup (`.fitnotes`) in das Konto eines bestehenden Benutzers
+(eine Session pro Trainingstag, Übungen ohne Historie werden übersprungen, neue Übungen sind privat; ein zweiter
+Import wird abgelehnt). Lokal: `cd backend && uv run python -m app.import_fitnotes ../data/FitNotes_Backup.fitnotes EMAIL [--dry-run]`.
+Live (nach dem Postgres-Umstieg): Datei per `scp` nach `/opt/curlhard/deploy/import/` legen, vorher `deploy/backup.sh`, dann
+`docker compose run --rm --no-deps -v $PWD/import:/import:ro --entrypoint python api -m app.import_fitnotes /import/FitNotes_Backup.fitnotes EMAIL`.
+Die Datei danach vom Server löschen. Der Ordner `data/` ist git-ignoriert.
+
+## Lokale Entwicklung
+
+`make db` startet Postgres (`docker-compose.dev.yaml`, Port 5432, Nutzer/Passwort/DB `curlhard`), `make dev` startet
+zusätzlich Backend und Vite. Tests und E2E legen `curlhard_test` bzw. `curlhard_e2e` selbst an.
+Schreibende Requests eines Nutzers werden per Postgres-Advisory-Lock (`deps.current_user`) serialisiert.
 
 Noch nicht praktisch geprüft (benötigt Server bzw. Geräte): Image-Builds, TLS/Certbot, Restore-Test,
 Test auf echtem iPhone (Safari 15), Usability-Test.

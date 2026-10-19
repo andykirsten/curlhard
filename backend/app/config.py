@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     secret_key: str = "dev-secret-change-me"
-    database_url: str = "sqlite:///./curlhard.db"
+    database_url: str = "postgresql+psycopg://curlhard:curlhard@localhost:5432/curlhard"
     cookie_name: str = "curlhard_session"
     cookie_secure: bool = True
     session_days: int = 30

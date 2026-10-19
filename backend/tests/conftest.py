@@ -1,26 +1,46 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel
+from sqlalchemy import text
+from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import Settings
 from app.main import create_app
 from app.models import MuscleGroup, User
+from app.reset_db import reset_schema
 from app.services.auth import hash_password
 
 PASSWORD = "correct-horse-battery"
+TEST_DATABASE_URL = os.environ.get(
+    "TEST_DATABASE_URL", "postgresql+psycopg://curlhard:curlhard@localhost:5432/curlhard_test"
+)
+
+
+@pytest.fixture(scope="session")
+def _schema():
+    """Frisches Schema einmal pro Testlauf; die Tests leeren nur die Tabellen."""
+    reset_schema(TEST_DATABASE_URL)
+    engine = create_engine(TEST_DATABASE_URL)
+    SQLModel.metadata.create_all(engine)
+    yield engine
+    engine.dispose()
 
 
 @pytest.fixture
-def app():
+def app(_schema):
+    tables = ", ".join(f'"{t.name}"' for t in SQLModel.metadata.sorted_tables)
+    with _schema.begin() as conn:
+        conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
     settings = Settings(
-        database_url="sqlite://",
+        database_url=TEST_DATABASE_URL,
         cookie_secure=False,
         rate_limit_per_minute=1000,
         secret_key="test",
     )
     application = create_app(settings)
-    SQLModel.metadata.create_all(application.state.engine)
-    return application
+    yield application
+    application.state.engine.dispose()
 
 
 def _client(app) -> TestClient:

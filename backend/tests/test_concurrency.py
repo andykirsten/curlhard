@@ -1,4 +1,4 @@
-"""Parallele Schreibzugriffe auf einer echten SQLite-Datei (WAL, BEGIN IMMEDIATE).
+"""Parallele Schreibzugriffe gegen Postgres (Advisory-Lock pro Nutzer in deps.current_user).
 
 Ohne die Schreibsperre pro Request würden Lesen-dann-Schreiben-Muster (max()+1,
 Existenzprüfung) doppelte Werte oder 500er erzeugen. Alle Antworten müssen < 500 sein.
@@ -8,10 +8,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, SQLModel, func, select
+from sqlmodel import Session, func, select
 
-from app.config import Settings
-from app.main import create_app
 from app.models import ExerciseNote, ExerciseSetting, SetLog, User, UserAvatar
 from app.services.auth import hash_password
 
@@ -19,19 +17,6 @@ API = "/api/v1"
 PASSWORD = "correct-horse-battery"
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + b"\x00" * 16
 WORKERS = 16
-
-
-@pytest.fixture
-def app(tmp_path):
-    settings = Settings(
-        database_url=f"sqlite:///{tmp_path}/c.db",
-        cookie_secure=False,
-        rate_limit_per_minute=100000,
-        secret_key="test",
-    )
-    application = create_app(settings)
-    SQLModel.metadata.create_all(application.state.engine)
-    return application
 
 
 def _client(app) -> TestClient:

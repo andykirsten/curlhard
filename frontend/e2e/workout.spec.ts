@@ -1,8 +1,29 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 
 const ADMIN = { email: 'admin@example.com', password: 'e2e-admin-password' }
 
 const USER = { email: 'anna@example.com', password: 'anna-secret-password', name: 'Anna' }
+
+// Alle Playwright-Projekte teilen sich eine Datenbank: jeder Test legt seinen eigenen Nutzer an
+function userFor(project: string) {
+  return { ...USER, email: `anna-${project}@example.com` }
+}
+
+async function createUser(request: APIRequestContext, email: string, password: string) {
+  const headers = { Origin: 'http://localhost:5173' }
+  await request.post('/api/v1/auth/login', {
+    data: { email: ADMIN.email, password: ADMIN.password },
+    headers,
+  })
+  const invite = await (await request.post('/api/v1/admin/invites', { data: {}, headers })).json()
+  await request.post('/api/v1/auth/logout', { headers })
+  const res = await request.post('/api/v1/auth/register', {
+    data: { email, password, display_name: 'Neu', invite_code: invite.code },
+    headers,
+  })
+  expect(res.status()).toBe(201)
+  await request.post('/api/v1/auth/logout', { headers })
+}
 
 async function login(page: Page, email: string, password: string) {
   await page.goto('/login')
@@ -11,7 +32,8 @@ async function login(page: Page, email: string, password: string) {
   await page.getByRole('button', { name: 'Anmelden' }).click()
 }
 
-test('Einladung → Registrierung → Plan → Workout loggen → Fortschritt', async ({ page }) => {
+test('Einladung → Registrierung → Plan → Workout loggen → Fortschritt', async ({ page }, testInfo) => {
+  const USER = userFor(testInfo.project.name)
   // --- Admin erzeugt Einladungscode ---
   await login(page, ADMIN.email, ADMIN.password)
   await expect(page.getByRole('heading', { name: /Heute/ })).toBeVisible()
@@ -171,8 +193,10 @@ test('geschützte Seiten leiten auf den Login um', async ({ page }) => {
   await expect(page).toHaveURL(/\/login/)
 })
 
-test('Beispielplan aus dem Startkatalog anlegen', async ({ page }) => {
-  await login(page, ADMIN.email, ADMIN.password)
+test('Beispielplan aus dem Startkatalog anlegen', async ({ page, request }, testInfo) => {
+  const email = `beispiel-${testInfo.project.name}@example.com`
+  await createUser(request, email, 'beispiel-secret-password')
+  await login(page, email, 'beispiel-secret-password')
   await page.getByRole('link', { name: 'Pläne', exact: true }).click()
   await expect(page.getByText('Noch keine Pläne')).toBeVisible()
   await page.getByRole('button', { name: 'Beispielplan anlegen' }).click()

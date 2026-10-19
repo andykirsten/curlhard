@@ -12,6 +12,19 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: curlhard
+          POSTGRES_PASSWORD: curlhard
+          POSTGRES_DB: curlhard
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U curlhard"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     defaults:
       run:
         working-directory: backend

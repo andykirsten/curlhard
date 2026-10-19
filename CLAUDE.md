@@ -2,12 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Curlhard is a self-hosted workout tracker PWA: FastAPI + SQLModel/SQLite backend (`backend/`), Vite/React 19/TypeScript frontend (`frontend/`). Project language (UI strings, API error messages, docs, comments) is German. Concept and architecture: `Curlhard – Implementierungsplan.md`; setup/deploy details: `README.md`.
+Curlhard is a self-hosted workout tracker PWA: FastAPI + SQLModel/PostgreSQL backend (`backend/`), Vite/React 19/TypeScript frontend (`frontend/`). Project language (UI strings, API error messages, docs, comments) is German. Concept and architecture: `Curlhard – Implementierungsplan.md`; setup/deploy details: `README.md`.
 
 ## Commands
 
 Backend (Python 3.12, uv) — run from `backend/`:
-- `uv sync && uv run alembic upgrade head`, then `uv run python -m app.seed` (idempotent catalog) and `uv run python -m app.create_admin EMAIL PASSWORT NAME`
+- `make db` (local Postgres via `docker-compose.dev.yaml`), then `uv sync && uv run alembic upgrade head`, then `uv run python -m app.seed` (idempotent catalog) and `uv run python -m app.create_admin EMAIL PASSWORT NAME`
 - Lint/typecheck/tests: `uv run ruff check . && uv run mypy app && uv run pytest`
 - Single test: `uv run pytest tests/test_plans.py::test_name -q`
 
@@ -26,7 +26,7 @@ Root `Makefile`: `make dev` (backend with `COOKIE_SECURE=false` + Vite), `make m
 
 **Multi-user isolation is a core invariant.** Every user-owned query must filter by `user_id` — use `repositories.common.get_owned` / `get_visible_exercise`; foreign resources must return 404 (not 403), unauthenticated 401. Exercises are global (`owner_user_id IS NULL`) or private to a user. `tests/test_isolation.py` exercises every endpoint with two users — extend it when adding endpoints.
 
-**Tests** use in-memory SQLite via the `app`/`admin`/client fixtures in `backend/tests/conftest.py` (schema created with `create_all`, not Alembic). Schema changes still need an Alembic migration in `backend/migrations`.
+**Tests** run against a real Postgres (`TEST_DATABASE_URL`, default `curlhard_test` on localhost; CI uses a service container) via the `app`/`admin`/client fixtures in `backend/tests/conftest.py` (schema created once with `create_all`, tables truncated per test, not Alembic). Write requests of one user are serialized by a Postgres advisory lock in `deps.current_user`, which keeps read-then-write patterns (`max()+1`, get-or-create) atomic. Schema changes still need an Alembic migration in `backend/migrations`.
 
 **Frontend** (`frontend/src/`): TanStack Router (`router.tsx`, pages in `routes/`), TanStack Query for server state, Zustand stores in `stores/` (active workout session and settings persist client-side), react-hook-form + zod (`lib/schemas.ts`), Tailwind + shadcn-style primitives in `components/ui/`. Target browser floor is iOS 15 Safari — `check:compat` fails the build on unsupported CSS.
 

@@ -22,7 +22,12 @@ def upgrade() -> None:
     """Upgrade schema."""
     with op.batch_alter_table("plan_day", schema=None) as batch_op:
         batch_op.add_column(sa.Column("weekdays", sa.JSON(), server_default="[]", nullable=False))
-    op.execute("UPDATE plan_day SET weekdays = '[' || weekday || ']' WHERE weekday IS NOT NULL")
+    op.execute(
+        "UPDATE plan_day SET weekdays = CAST('[' || weekday || ']' AS JSON) "
+        "WHERE weekday IS NOT NULL"
+        if op.get_bind().dialect.name == "postgresql"
+        else "UPDATE plan_day SET weekdays = '[' || weekday || ']' WHERE weekday IS NOT NULL"
+    )
     with op.batch_alter_table("plan_day", schema=None) as batch_op:
         batch_op.drop_column("weekday")
 
@@ -32,6 +37,10 @@ def downgrade() -> None:
     with op.batch_alter_table("plan_day", schema=None) as batch_op:
         batch_op.add_column(sa.Column("weekday", sa.Integer(), nullable=True))
     # Bei mehreren Wochentagen bleibt nur der erste erhalten
-    op.execute("UPDATE plan_day SET weekday = json_extract(weekdays, '$[0]')")
+    op.execute(
+        "UPDATE plan_day SET weekday = CAST(weekdays::json->>0 AS INTEGER)"
+        if op.get_bind().dialect.name == "postgresql"
+        else "UPDATE plan_day SET weekday = json_extract(weekdays, '$[0]')"
+    )
     with op.batch_alter_table("plan_day", schema=None) as batch_op:
         batch_op.drop_column("weekdays")
