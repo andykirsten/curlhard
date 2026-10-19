@@ -8,6 +8,10 @@ from sqlalchemy.orm.exc import StaleDataError
 from app.errors import BUSY_MESSAGE, CONFLICT_MESSAGE, INTERNAL_MESSAGE
 
 
+class _SerializationFailure(Exception):
+    sqlstate = "40001"
+
+
 def _app_with_routes(app):
     router = APIRouter()
 
@@ -21,7 +25,7 @@ def _app_with_routes(app):
 
     @router.get("/_test/locked")
     def locked():
-        raise OperationalError("SELECT", {}, Exception("database is locked"))
+        raise OperationalError("SELECT", {}, _SerializationFailure("could not serialize access"))
 
     @router.get("/_test/other-operational")
     def other_operational():

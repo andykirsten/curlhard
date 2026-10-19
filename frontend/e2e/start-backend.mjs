@@ -1,20 +1,16 @@
 // Startet das Backend für die E2E-Tests mit frischer Datenbank (Migration, Startkatalog, Admin).
 import { spawn, execSync } from 'node:child_process'
-import { existsSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const backendDir = path.resolve(here, '../../backend')
-const db = path.join(backendDir, 'e2e.db')
-
-for (const suffix of ['', '-wal', '-shm']) {
-  if (existsSync(db + suffix)) rmSync(db + suffix)
-}
+// Postgres aus docker-compose.dev.yaml (`make db`); frisches Schema in der Datenbank curlhard_e2e
+const base = process.env.E2E_DATABASE_URL ?? 'postgresql+psycopg://curlhard:curlhard@localhost:5432'
 
 const env = {
   ...process.env,
-  DATABASE_URL: `sqlite:///${db.replaceAll('\\', '/')}`,
+  DATABASE_URL: `${base}/curlhard_e2e`,
   COOKIE_SECURE: 'false',
   RATE_LIMIT_PER_MINUTE: '1000',
   // Vite-Dev-Proxy leitet den Host-Header auf :8000 um; der Origin bleibt :5173
@@ -22,6 +18,7 @@ const env = {
 }
 const run = (cmd) => execSync(cmd, { cwd: backendDir, env, stdio: 'inherit' })
 
+run(`uv run python -m app.reset_db ${base}/curlhard_e2e`)
 run('uv run alembic upgrade head')
 run('uv run python -m app.seed')
 run('uv run python -m app.create_admin admin@example.com e2e-admin-password Admin')

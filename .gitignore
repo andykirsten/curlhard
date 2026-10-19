@@ -12,3 +12,6 @@ deploy/.env
 frontend/test-results/
 frontend/playwright-report/
 screens/
+
+# Persönliche Exporte (z. B. FitNotes-Backup) nie einchecken
+/data/

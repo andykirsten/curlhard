@@ -75,8 +75,9 @@ def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(OperationalError)
     async def _operational_error(request: Request, exc: OperationalError):
         logger.exception("Datenbankfehler bei %s %s", request.method, request.url.path)
-        text = str(exc).lower()
-        if "locked" in text or "busy" in text:
+        # 40001 = serialization_failure, 40P01 = deadlock_detected, 55P03 = lock_not_available
+        sqlstate = getattr(exc.orig, "sqlstate", None)
+        if sqlstate in ("40001", "40P01", "55P03"):
             return JSONResponse(_body("db_busy", BUSY_MESSAGE), status_code=503)
         return JSONResponse(_body("internal_error", INTERNAL_MESSAGE), status_code=500)
 
