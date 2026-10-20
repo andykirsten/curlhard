@@ -49,5 +49,17 @@ services:
     restart: unless-stopped
     logging: *log
 
+  # Optional: Cloudflare Tunnel statt Host-Nginx (aktiv mit COMPOSE_PROFILES=tunnel).
+  # Public Hostname im Cloudflare-Dashboard auf http://web:80 zeigen lassen.
+  tunnel:
+    image: cloudflare/cloudflared:2026.10.0
+    profiles: [tunnel]
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on: [web]
+    restart: unless-stopped
+    logging: *log
+
 volumes:
   pgdata:
