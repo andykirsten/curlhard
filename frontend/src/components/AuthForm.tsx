@@ -112,7 +112,7 @@ export function LoginForm({
           type="button"
           aria-pressed={showPassword}
           onClick={() => setShowPassword((v) => !v)}
-          className="shrink-0 text-[13px] font-bold uppercase leading-none tracking-[0.12em] text-muted-foreground"
+          className="-my-2 -mr-2 shrink-0 rounded-md px-2 py-2 text-[13px] font-bold uppercase leading-none tracking-[0.12em] text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {showPassword ? 'Verbergen' : 'Zeigen'}
         </button>

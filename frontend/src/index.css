@@ -30,6 +30,8 @@
     --input: 36 17% 77%;
     --ring: 12 91% 43%;
     --gold: 38 100% 33%;
+    /* Formular-Steuerelemente, Scrollbars und Autofill passend zum Theme rendern */
+    color-scheme: light;
   }
 
   .dark {
@@ -51,6 +53,7 @@
     --input: 27 12% 18%;
     --ring: 12 100% 55%;
     --gold: 41 100% 56%;
+    color-scheme: dark;
   }
 
   * {
@@ -79,6 +82,24 @@
   select,
   textarea {
     font-size: 16px; /* verhindert Zoom beim Fokussieren in iOS Safari */
+  }
+
+  /*
+   * Browser-Autofill (Chrome, Safari, Edge) färbt Felder beim Fokus bzw. bei der
+   * Vorschau gespeicherter Zugangsdaten hell ein. Hintergrund lässt sich dort nicht
+   * per background überschreiben, daher mit einem inneren Schatten übermalen.
+   * --autofill-bg setzen, wenn das Feld auf einer anderen Fläche als dem Seitenhintergrund liegt.
+   */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: hsl(var(--foreground));
+    caret-color: hsl(var(--foreground));
+    -webkit-box-shadow: 0 0 0 1000px var(--autofill-bg, hsl(var(--background))) inset;
+    box-shadow: 0 0 0 1000px var(--autofill-bg, hsl(var(--background))) inset;
+    transition: background-color 600000s 0s;
   }
 }
 
