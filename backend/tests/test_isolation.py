@@ -60,6 +60,8 @@ def _cases(w):
         ("patch", f"/sessions/{w['session']}", {"note": "gehackt"}),
         ("delete", f"/sessions/{w['session']}", None),
         ("post", f"/sessions/{w['session']}/finish", None),
+        ("put", f"/sessions/{w['session']}/order", {"ids": [w["se"]]}),
+        ("post", f"/sessions/{w['session']}/apply-to-plan", None),
         ("post", f"/sessions/{w['session']}/exercises", {"exercise_id": w["private"]}),
         ("patch", f"/session-exercises/{w['se']}", {"note": "gehackt"}),
         ("delete", f"/session-exercises/{w['se']}", None),

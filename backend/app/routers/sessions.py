@@ -18,8 +18,9 @@ from app.models import (
     WorkoutSession,
     utcnow,
 )
-from app.repositories.common import get_owned, get_visible_exercise
+from app.repositories.common import apply_order, get_owned, get_visible_exercise
 from app.repositories.sets import load_sets
+from app.schemas.plans import OrderUpdate
 from app.schemas.sessions import (
     PreviousExercise,
     SessionCreate,
@@ -264,6 +265,7 @@ def get_session_previous(session_id: int, user: CurrentUser, db: DbSession):
     ws = get_owned(db, WorkoutSession, session_id, user.id, "Session")  # type: ignore[arg-type]
     day = None
     targets: dict[int, PlanExercise] = {}
+    planned: list[int] = []
     if ws.plan_day_id is not None:
         day = db.exec(
             select(PlanDay).where(PlanDay.user_id == user.id, PlanDay.id == ws.plan_day_id)
@@ -275,6 +277,7 @@ def get_session_previous(session_id: int, user: CurrentUser, db: DbSession):
         ).all()
         # Bei doppelt eingeplanter Übung gewinnt die erste Position
         targets = {pe.exercise_id: pe for pe in items}
+        planned = [pe.exercise_id for pe in reversed(items)]
     exercise_ids = db.exec(
         select(SessionExercise.exercise_id)
         .where(SessionExercise.user_id == user.id, SessionExercise.session_id == ws.id)
@@ -302,7 +305,9 @@ def get_session_previous(session_id: int, user: CurrentUser, db: DbSession):
                 sets=[LastSet(**s) for s in _last_set_dicts(prev)],
             )
         )
-    return SessionPrevious(plan_day_name=day.name if day else None, exercises=out)
+    return SessionPrevious(
+        plan_day_name=day.name if day else None, planned_exercise_ids=planned, exercises=out
+    )
 
 
 @router.patch("/sessions/{session_id}", response_model=SessionRead)
@@ -374,6 +379,18 @@ def add_session_exercise(
         position=se.position,
         note=se.note,
     )
+
+
+@router.put("/sessions/{session_id}/order", response_model=SessionRead)
+def order_session_exercises(session_id: int, body: OrderUpdate, user: CurrentUser, db: DbSession):
+    ws = get_owned(db, WorkoutSession, session_id, user.id, "Session")  # type: ignore[arg-type]
+    items = db.exec(
+        select(SessionExercise).where(
+            SessionExercise.user_id == user.id, SessionExercise.session_id == ws.id
+        )
+    ).all()
+    apply_order(db, list(items), body.ids)
+    return session_read(db, user.id, ws)  # type: ignore[arg-type]
 
 
 @router.patch("/session-exercises/{se_id}", response_model=SessionExerciseRead)

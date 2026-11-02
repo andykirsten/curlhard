@@ -103,6 +103,15 @@
   }
 }
 
+@keyframes curlhard-wiggle {
+  from {
+    transform: rotate(-1.5deg);
+  }
+  to {
+    transform: rotate(1.5deg);
+  }
+}
+
 @keyframes curlhard-pulse {
   0%,
   100% {

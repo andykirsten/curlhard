@@ -1649,6 +1649,49 @@
         }
       }
     },
+    "/api/v1/sessions/{session_id}/apply-to-plan": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Apply Session To Plan",
+        "description": "Übungsauswahl und -reihenfolge der Session in den Plantag übernehmen.",
+        "operationId": "apply_session_to_plan",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanDayRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/plan-days/{day_id}/exercises": {
       "post": {
         "tags": [
@@ -2686,6 +2729,58 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SessionExerciseRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{session_id}/order": {
+      "put": {
+        "tags": [
+          "sessions"
+        ],
+        "summary": "Order Session Exercises",
+        "operationId": "order_session_exercises",
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionRead"
                 }
               }
             }
@@ -5998,6 +6093,14 @@
             ],
             "title": "Plan Day Name"
           },
+          "planned_exercise_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Planned Exercise Ids",
+            "default": []
+          },
           "exercises": {
             "items": {
               "$ref": "#/components/schemas/PreviousExercise"
@@ -6010,6 +6113,7 @@
         "type": "object",
         "required": [
           "plan_day_name",
+          "planned_exercise_ids",
           "exercises"
         ],
         "title": "SessionPrevious"

@@ -72,6 +72,36 @@ def test_start_session_copies_plan_exercises(alice, catalog):
     assert s["finished_at"] is None
 
 
+def test_reorder_session_exercises(alice, catalog):
+    plan, day = _active_plan(alice, catalog)
+    s = alice.post(f"{API}/sessions", json={"plan_day_id": day["id"]}).json()
+    a, b = (e["id"] for e in s["exercises"])
+    r = alice.put(f"{API}/sessions/{s['id']}/order", json={"ids": [b, a]})
+    assert [e["id"] for e in r.json()["exercises"]] == [b, a]
+    assert alice.put(f"{API}/sessions/{s['id']}/order", json={"ids": [a]}).status_code == 422
+
+
+def test_apply_session_to_plan(alice, catalog):
+    plan, day = _active_plan(alice, catalog)
+    bench, squat = catalog["bench"]["id"], catalog["squat"]["id"]
+    s = alice.post(f"{API}/sessions", json={"plan_day_id": day["id"]}).json()
+    prev = alice.get(f"{API}/sessions/{s['id']}/previous").json()
+    assert prev["planned_exercise_ids"] == [bench, squat]
+    # Kniebeuge raus, eigene Übung dazu und an den Anfang
+    curl = alice.post(f"{API}/exercises", json={"name": "Curls"}).json()["id"]
+    alice.delete(f"{API}/session-exercises/{s['exercises'][1]['id']}")
+    new = alice.post(f"{API}/sessions/{s['id']}/exercises", json={"exercise_id": curl}).json()
+    alice.put(f"{API}/sessions/{s['id']}/order", json={"ids": [new["id"], s["exercises"][0]["id"]]})
+    r = alice.post(f"{API}/sessions/{s['id']}/apply-to-plan")
+    assert r.status_code == 200
+    exercises = r.json()["exercises"]
+    assert [e["exercise_id"] for e in exercises] == [curl, bench]
+    assert exercises[1]["target_rest_sec"] == 120  # bestehende Ziele bleiben
+    assert exercises[0]["target_sets"] == 3  # Standardwerte
+    free = alice.post(f"{API}/sessions", json={}).json()
+    assert alice.post(f"{API}/sessions/{free['id']}/apply-to-plan").status_code == 422
+
+
 def test_free_session_and_add_exercise(alice, catalog):
     s = alice.post(f"{API}/sessions", json={}).json()
     assert s["plan_day_id"] is None and s["exercises"] == []

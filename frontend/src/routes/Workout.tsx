@@ -9,6 +9,7 @@ import {
   getGetSessionPreviousQueryKey,
   useAddSessionExercise,
   useAddSet,
+  useApplySessionToPlan,
   useDeleteSession,
   useDeleteSessionExercise,
   useDeleteSet,
@@ -19,6 +20,7 @@ import {
   useGetSessionDetail,
   useGetSessionPrevious,
   useListExercises,
+  useOrderSessionExercises,
   usePutNote,
   useUpdateSession,
   useUpdateSessionExercise,
@@ -181,6 +183,7 @@ function ExerciseFocus({
   onRecordMoment,
   onGo,
   onAddExercise,
+  onEditExercises,
   session,
 }: {
   se: SessionExerciseRead
@@ -198,6 +201,7 @@ function ExerciseFocus({
   onRecordMoment: (moment: RecordMomentData) => void
   onGo: (delta: 1 | -1) => void
   onAddExercise: () => void
+  onEditExercises: () => void
   session: SessionRead
 }) {
   const queryClient = useQueryClient()
@@ -621,6 +625,17 @@ function ExerciseFocus({
               <Plus className="h-4 w-4" /> Übung hinzufügen
             </Button>
           )}
+          {!finished && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMenuOpen(false)
+                onEditExercises()
+              }}
+            >
+              Übungen bearbeiten
+            </Button>
+          )}
           <Button
             variant="destructive"
             aria-label="Übung entfernen"
@@ -685,6 +700,9 @@ export function WorkoutPage() {
   const addExercise = useAddSessionExercise()
   const finish = useFinishSession()
   const remove = useDeleteSession()
+  const order = useOrderSessionExercises()
+  const removeExercise = useDeleteSessionExercise()
+  const applyToPlan = useApplySessionToPlan()
   const endSession = useActiveSession((s) => s.endSession)
   const defaultRest = useSettings((s) => s.defaultRestSec)
   const activeSessionId = useActiveSession((s) => s.sessionId)
@@ -693,6 +711,8 @@ export function WorkoutPage() {
   const [focusIndex, setFocusIndex] = useState(0)
   const [recordsBySet, setRecordsBySet] = useState<Record<number, number[]>>({})
   const [moment, setMoment] = useState<RecordMomentData | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [askPlan, setAskPlan] = useState(false)
 
   if (isLoading) return <Spinner />
   if (error || !session) {
@@ -722,7 +742,39 @@ export function WorkoutPage() {
   const go = (delta: 1 | -1) =>
     setFocusIndex(Math.min(Math.max(0, index + delta), Math.max(0, count - 1)))
 
-  const onFinish = () =>
+  const isEditing = editing && count > 0 && !finished
+
+  const onReorder = (ids: number[]) => {
+    queryClient.setQueryData<SessionRead>(
+      getGetSessionDetailQueryKey(id),
+      (old) =>
+        old && { ...old, exercises: ids.flatMap((i) => old.exercises.find((x) => x.id === i) ?? []) },
+    )
+    // Fokus bleibt bei derselben Übung, auch wenn sich ihr Index ändert
+    if (se) setFocusIndex(ids.indexOf(se.id))
+    order.mutate(
+      { sessionId: id, data: { ids } },
+      { onSettled: refresh, onError: (e) => toast.error(errorMessage(e)) },
+    )
+  }
+
+  const onRemove = (seId: number) => {
+    const at = session.exercises.findIndex((x) => x.id === seId)
+    const sets = session.exercises[at]?.sets.length ?? 0
+    if (sets > 0 && !confirm(`${sets} erfasste Sätze werden mit entfernt. Übung entfernen?`)) return
+    removeExercise.mutate(
+      { seId },
+      {
+        onSuccess: () => {
+          if (at < index) setFocusIndex(index - 1)
+          return refresh()
+        },
+        onError: (e) => toast.error(errorMessage(e)),
+      },
+    )
+  }
+
+  const finishNow = (message: string) =>
     finish.mutate(
       { sessionId: id },
       {
@@ -730,8 +782,25 @@ export function WorkoutPage() {
           endSession()
           useActiveSession.getState().clearRest()
           await queryClient.invalidateQueries()
-          toast.success('Training beendet')
+          toast.success(message)
           void navigate({ to: '/' })
+        },
+        onError: (e) => toast.error(errorMessage(e)),
+      },
+    )
+
+  // Weicht die Session vom Plantag ab, vor dem Beenden anbieten, den Plan anzupassen
+  const planDiffers =
+    previous.data?.plan_day_name != null &&
+    previous.data.planned_exercise_ids.join() !== session.exercises.map((x) => x.exercise_id).join()
+  const onFinish = () => (planDiffers ? setAskPlan(true) : finishNow('Training beendet'))
+  const onUpdatePlanAndFinish = () =>
+    applyToPlan.mutate(
+      { sessionId: id },
+      {
+        onSuccess: () => {
+          setAskPlan(false)
+          finishNow('Training beendet · Plan aktualisiert')
         },
         onError: (e) => toast.error(errorMessage(e)),
       },
@@ -745,6 +814,19 @@ export function WorkoutPage() {
       <div className="sticky top-0 z-10 bg-background/95 pb-2 backdrop-blur">
         {finished ? (
           <PageHeader title="Session" back="/history" />
+        ) : isEditing ? (
+          <header className="safe-top flex items-center justify-between gap-3 px-5 pt-4">
+            <h1 className="font-sans text-xs font-bold uppercase tracking-[0.14em] text-primary">
+              Übungen bearbeiten
+            </h1>
+            <Button
+              type="button"
+              className="rounded-xl px-5 text-sm font-bold uppercase tracking-wide"
+              onClick={() => setEditing(false)}
+            >
+              Fertig
+            </Button>
+          </header>
         ) : (
           <WorkoutHeader
             startedAt={session.started_at}
@@ -762,6 +844,10 @@ export function WorkoutPage() {
             selected={index}
             onSelect={setFocusIndex}
             onAdd={finished ? undefined : () => setPicker(true)}
+            editing={isEditing}
+            onEditStart={finished ? undefined : () => setEditing(true)}
+            onReorder={onReorder}
+            onRemove={onRemove}
           />
         )}
       </div>
@@ -797,6 +883,7 @@ export function WorkoutPage() {
             onRecordMoment={setMoment}
             onGo={go}
             onAddExercise={() => setPicker(true)}
+            onEditExercises={() => setEditing(true)}
             session={session}
           />
         )}
@@ -826,6 +913,30 @@ export function WorkoutPage() {
           </div>
         )}
       </div>
+      <Sheet open={askPlan} onOpenChange={setAskPlan} title="Plan aktualisieren?">
+        <div className="flex flex-col gap-2 pb-2">
+          <p className="text-sm text-muted-foreground">
+            Übungen oder Reihenfolge weichen vom Trainingstag „{previous.data?.plan_day_name}“ ab.
+            Soll der Plan an dieses Training angepasst werden?
+          </p>
+          <Button
+            disabled={applyToPlan.isPending || finish.isPending}
+            onClick={onUpdatePlanAndFinish}
+          >
+            Plan aktualisieren &amp; beenden
+          </Button>
+          <Button
+            variant="outline"
+            disabled={applyToPlan.isPending || finish.isPending}
+            onClick={() => {
+              setAskPlan(false)
+              finishNow('Training beendet')
+            }}
+          >
+            Nur beenden
+          </Button>
+        </div>
+      </Sheet>
       <ExercisePicker
         open={picker}
         onOpenChange={setPicker}
