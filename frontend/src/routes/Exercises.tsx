@@ -183,7 +183,7 @@ export function ExercisesPage() {
     search: search || undefined,
     muscle_group: muscle === '' ? undefined : muscle,
     equipment: equip === '' ? undefined : equip,
-    limit: 200,
+    limit: 1000,
   })
   const isAdmin = me.data?.role === 'admin'
   const muscleName = new Map((muscles.data ?? []).map((m) => [m.id, m.name]))

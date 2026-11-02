@@ -694,7 +694,7 @@ export function WorkoutPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: session, isLoading, error } = useGetSessionDetail(id)
-  const exercises = useListExercises({ limit: 200, include_inactive: true })
+  const exercises = useListExercises({ limit: 1000, include_inactive: true })
   // Vergleichswerte und Ziele kommen vom Plantag der Session, nicht vom heutigen Wochentag
   const previous = useGetSessionPrevious(id)
   const addExercise = useAddSessionExercise()

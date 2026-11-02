@@ -352,7 +352,7 @@ export function PlanEditorPage() {
   const queryClient = useQueryClient()
   const sensors = useSortSensors()
   const { data: plan, isLoading } = useGetPlan(id)
-  const exercises = useListExercises({ limit: 200, include_inactive: true })
+  const exercises = useListExercises({ limit: 1000, include_inactive: true })
   const updatePlan = useUpdatePlan()
   const createDay = useCreateDay()
   const orderDays = useOrderDays()
