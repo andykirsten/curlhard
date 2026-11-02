@@ -4,8 +4,8 @@ from sqlmodel import Session, col, select
 
 from app.deps import CurrentUser, DbSession
 from app.errors import ApiError
-from app.models import Plan, PlanDay, PlanExercise
-from app.repositories.common import get_owned, get_visible_exercise
+from app.models import Plan, PlanDay, PlanExercise, SessionExercise, WorkoutSession
+from app.repositories.common import apply_order, get_owned, get_visible_exercise
 from app.schemas.plans import (
     OrderUpdate,
     PlanCreate,
@@ -72,18 +72,6 @@ def _next_position(db: Session, model, user_id: int, **filters) -> int:
 def _check_reps(lo: int, hi: int) -> None:
     if lo > hi:
         raise ApiError(422, "validation_error", "Wiederholungen: Minimum größer als Maximum")
-
-
-def _apply_order(db: Session, items: list, ids: list[int]) -> None:
-    if sorted(ids) != sorted(i.id for i in items) or len(set(ids)) != len(ids):
-        raise ApiError(
-            422, "validation_error", "Reihenfolge muss alle Einträge genau einmal enthalten"
-        )
-    by_id = {i.id: i for i in items}
-    for pos, item_id in enumerate(ids):
-        by_id[item_id].position = pos
-        db.add(by_id[item_id])
-    db.commit()
 
 
 # ---- Pläne ---------------------------------------------------------------------------------
@@ -164,7 +152,7 @@ def order_days(plan_id: int, body: OrderUpdate, user: CurrentUser, db: DbSession
     days = db.exec(
         select(PlanDay).where(PlanDay.user_id == user.id, PlanDay.plan_id == plan.id)
     ).all()
-    _apply_order(db, list(days), body.ids)
+    apply_order(db, list(days), body.ids)
     return plan_read(db, user.id, plan)  # type: ignore[arg-type]
 
 
@@ -217,7 +205,45 @@ def order_exercises(day_id: int, body: OrderUpdate, user: CurrentUser, db: DbSes
             PlanExercise.user_id == user.id, PlanExercise.plan_day_id == day.id
         )
     ).all()
-    _apply_order(db, list(items), body.ids)
+    apply_order(db, list(items), body.ids)
+    return _day_reads(db, user.id, [day])[0]  # type: ignore[arg-type]
+
+
+@router.post("/sessions/{session_id}/apply-to-plan", response_model=PlanDayRead)
+def apply_session_to_plan(session_id: int, user: CurrentUser, db: DbSession):
+    """Übungsauswahl und -reihenfolge der Session in den Plantag übernehmen."""
+    ws = get_owned(db, WorkoutSession, session_id, user.id, "Session")  # type: ignore[arg-type]
+    if ws.plan_day_id is None:
+        raise ApiError(422, "validation_error", "Die Session gehört zu keinem Trainingstag")
+    day = get_owned(db, PlanDay, ws.plan_day_id, user.id, "Trainingstag")  # type: ignore[arg-type]
+    session_exercises = db.exec(
+        select(SessionExercise)
+        .where(SessionExercise.user_id == user.id, SessionExercise.session_id == ws.id)
+        .order_by(SessionExercise.position, SessionExercise.id)
+    ).all()
+    unused = list(
+        db.exec(
+            select(PlanExercise)
+            .where(PlanExercise.user_id == user.id, PlanExercise.plan_day_id == day.id)
+            .order_by(PlanExercise.position, PlanExercise.id)
+        ).all()
+    )
+    for pos, se in enumerate(session_exercises):
+        pe = next((p for p in unused if p.exercise_id == se.exercise_id), None)
+        if pe is None:  # neue Übung: Standardziele des Modells
+            pe = PlanExercise(
+                user_id=user.id,  # type: ignore[arg-type]
+                plan_day_id=day.id,  # type: ignore[arg-type]
+                exercise_id=se.exercise_id,
+                position=pos,
+            )
+        else:
+            unused.remove(pe)
+        pe.position = pos
+        db.add(pe)
+    for pe in unused:
+        db.delete(pe)
+    db.commit()
     return _day_reads(db, user.id, [day])[0]  # type: ignore[arg-type]
 
 

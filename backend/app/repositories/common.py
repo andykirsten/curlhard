@@ -4,10 +4,22 @@ from typing import TypeVar
 
 from sqlmodel import Session, SQLModel, select
 
-from app.errors import not_found
+from app.errors import ApiError, not_found
 from app.models import Exercise
 
 T = TypeVar("T", bound=SQLModel)
+
+
+def apply_order(db: Session, items: list, ids: list[int]) -> None:
+    if sorted(ids) != sorted(i.id for i in items) or len(set(ids)) != len(ids):
+        raise ApiError(
+            422, "validation_error", "Reihenfolge muss alle Einträge genau einmal enthalten"
+        )
+    by_id = {i.id: i for i in items}
+    for pos, item_id in enumerate(ids):
+        by_id[item_id].position = pos
+        db.add(by_id[item_id])
+    db.commit()
 
 
 def get_owned(db: Session, model: type[T], obj_id: int, user_id: int, what: str = "Ressource") -> T:

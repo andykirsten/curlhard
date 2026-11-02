@@ -42,6 +42,34 @@ describe('ExerciseStrip', () => {
     expect(tabs[0]).toHaveFocus()
   })
 
+  it('starts edit mode on long press, not on a short tap', () => {
+    vi.useFakeTimers()
+    const onEditStart = vi.fn()
+    render(<ExerciseStrip items={ITEMS} selected={0} onSelect={() => {}} onEditStart={onEditStart} />)
+    const tab = screen.getAllByRole('tab')[0]!
+    fireEvent.pointerDown(tab, { clientX: 10, clientY: 10 })
+    vi.advanceTimersByTime(200)
+    fireEvent.pointerUp(tab)
+    vi.advanceTimersByTime(600)
+    expect(onEditStart).not.toHaveBeenCalled()
+    fireEvent.pointerDown(tab, { clientX: 10, clientY: 10 })
+    fireEvent.pointerMove(tab, { clientX: 40, clientY: 10 })
+    vi.advanceTimersByTime(600)
+    expect(onEditStart).not.toHaveBeenCalled()
+    fireEvent.pointerDown(tab, { clientX: 10, clientY: 10 })
+    vi.advanceTimersByTime(600)
+    expect(onEditStart).toHaveBeenCalledOnce()
+    vi.useRealTimers()
+  })
+
+  it('removes an exercise in edit mode', () => {
+    const onRemove = vi.fn()
+    render(<ExerciseStrip items={ITEMS} selected={0} onSelect={() => {}} editing onRemove={onRemove} />)
+    expect(screen.queryAllByRole('tab')).toHaveLength(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Übung entfernen: Rudern' }))
+    expect(onRemove).toHaveBeenCalledWith(3)
+  })
+
   it('offers an add tile when a handler is given', () => {
     const onAdd = vi.fn()
     render(<Harness onAdd={onAdd} />)

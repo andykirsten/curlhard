@@ -100,6 +100,8 @@ class PreviousExercise(BaseModel):
 class SessionPrevious(BaseModel):
     model_config = ConfigDict(json_schema_serialization_defaults_required=True)
     plan_day_name: str | None = None
+    #: Übungen des Plantags in Plan-Reihenfolge; leer ohne Plantag
+    planned_exercise_ids: list[int] = []
     exercises: list[PreviousExercise] = []
 
 

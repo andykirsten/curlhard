@@ -654,6 +654,7 @@ export interface SessionExerciseUpdate {
 
 export interface SessionPrevious {
   plan_day_name: string | null;
+  planned_exercise_ids: number[];
   exercises: PreviousExercise[];
 }
 
@@ -4364,6 +4365,81 @@ export const useOrderExercises = <TError = ErrorType<HTTPValidationError>,
       return useMutation(getOrderExercisesMutationOptions(options), queryClient);
     }
 
+export const getApplySessionToPlanUrl = (sessionId: number,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/apply-to-plan`
+}
+
+/**
+ * Übungsauswahl und -reihenfolge der Session in den Plantag übernehmen.
+ * @summary Apply Session To Plan
+ */
+export const applySessionToPlan = async (sessionId: number, options?: Parameters<typeof customFetch>[1]): Promise<PlanDayRead> => {
+
+  return customFetch<PlanDayRead>(getApplySessionToPlanUrl(sessionId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getApplySessionToPlanMutationKey = () => ['applySessionToPlan'] as const;
+
+export const getApplySessionToPlanMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applySessionToPlan>>, TError,ApplySessionToPlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applySessionToPlan>>, TError,ApplySessionToPlanMutationVariables, TContext> => {
+
+const mutationKey = getApplySessionToPlanMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applySessionToPlan>>, ApplySessionToPlanMutationVariables> = (props) => {
+          const {sessionId} = props ?? {};
+
+          return  applySessionToPlan(sessionId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplySessionToPlanMutationResult = NonNullable<Awaited<ReturnType<typeof applySessionToPlan>>>
+
+    export type ApplySessionToPlanMutationError = ErrorType<HTTPValidationError>
+    export type ApplySessionToPlanMutationVariables = {sessionId: number}
+
+    /**
+ * @summary Apply Session To Plan
+ */
+export const useApplySessionToPlan = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applySessionToPlan>>, TError,ApplySessionToPlanMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof applySessionToPlan>>,
+        TError,
+        ApplySessionToPlanMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApplySessionToPlanMutationOptions(options), queryClient);
+    }
+
 export const getAddPlanExerciseUrl = (dayId: number,) => {
 
 
@@ -6453,6 +6529,95 @@ export const useAddSessionExercise = <TError = ErrorType<HTTPValidationError>,
         TContext
       > => {
       return useMutation(getAddSessionExerciseMutationOptions(options), queryClient);
+    }
+
+export const getOrderSessionExercisesUrl = (sessionId: number,) => {
+
+
+
+
+  return `/api/v1/sessions/${sessionId}/order`
+}
+
+/**
+ * @summary Order Session Exercises
+ */
+export const orderSessionExercises = async (sessionId: number,
+    orderUpdate: OrderUpdate, options?: Parameters<typeof customFetch>[1]): Promise<SessionRead> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SessionRead>(getOrderSessionExercisesUrl(sessionId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(orderUpdate)
+  }
+);}
+
+
+
+
+
+export const getOrderSessionExercisesMutationKey = () => ['orderSessionExercises'] as const;
+
+export const getOrderSessionExercisesMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof orderSessionExercises>>, TError,OrderSessionExercisesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof orderSessionExercises>>, TError,OrderSessionExercisesMutationVariables, TContext> => {
+
+const mutationKey = getOrderSessionExercisesMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof orderSessionExercises>>, OrderSessionExercisesMutationVariables> = (props) => {
+          const {sessionId,data} = props ?? {};
+
+          return  orderSessionExercises(sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OrderSessionExercisesMutationResult = NonNullable<Awaited<ReturnType<typeof orderSessionExercises>>>
+    export type OrderSessionExercisesMutationBody = BodyType<OrderUpdate>
+    export type OrderSessionExercisesMutationError = ErrorType<HTTPValidationError>
+    export type OrderSessionExercisesMutationVariables = {sessionId: number;data: BodyType<OrderUpdate>}
+
+    /**
+ * @summary Order Session Exercises
+ */
+export const useOrderSessionExercises = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof orderSessionExercises>>, TError,OrderSessionExercisesMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof orderSessionExercises>>,
+        TError,
+        OrderSessionExercisesMutationVariables,
+        TContext
+      > => {
+      return useMutation(getOrderSessionExercisesMutationOptions(options), queryClient);
     }
 
 export const getUpdateSessionExerciseUrl = (seId: number,) => {
