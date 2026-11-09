@@ -53,6 +53,7 @@ def clone_plan(
                     target_reps_max=pe.target_reps_max,
                     target_rest_sec=pe.target_rest_sec,
                     note=pe.note,
+                    group_no=pe.group_no,
                 )
             )
     return copy

@@ -37,6 +37,7 @@ class PlanExerciseCreate(BaseModel):
     target_reps_max: int = Field(default=12, ge=1, le=100)
     target_rest_sec: int = Field(default=90, ge=0, le=3600)
     note: str = ""
+    group_no: int | None = Field(default=None, ge=1)
 
 
 class PlanExerciseUpdate(BaseModel):
@@ -46,6 +47,7 @@ class PlanExerciseUpdate(BaseModel):
     target_reps_max: int | None = Field(default=None, ge=1, le=100)
     target_rest_sec: int | None = Field(default=None, ge=0, le=3600)
     note: str | None = None
+    group_no: int | None = Field(default=None, ge=1)  # null löst die Gruppe
 
 
 class OrderUpdate(BaseModel):
@@ -62,6 +64,7 @@ class PlanExerciseRead(BaseModel):
     target_reps_max: int
     target_rest_sec: int
     note: str
+    group_no: int | None = None
 
 
 class PlanDayRead(BaseModel):

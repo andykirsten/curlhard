@@ -1,6 +1,7 @@
 """Reine Berechnungen für die Progression (keine DB-Zugriffe).
 
-Aufwärmsätze zählen nie mit. Gewichte in kg.
+Aufwärmsätze zählen nie mit. Drop- und Backoff-Sätze zählen für Volumen und Satzzahlen, aber nicht
+für e1RM, nRM, Bestwerte und Rekorde. Gewichte in kg.
 """
 
 import math
@@ -28,6 +29,9 @@ class SetData:
     rpe: float | None = None
     set_id: int = 0
     set_number: int = 0
+    set_type: str = "normal"
+    #: Körpergewicht am Tag des Satzes; None = Wert des Aufrufers verwenden
+    body_weight_kg: float | None = None
 
 
 def effective_load(load_type: str, weight_kg: float, body_weight_kg: float | None) -> float | None:
@@ -39,6 +43,11 @@ def effective_load(load_type: str, weight_kg: float, body_weight_kg: float | Non
     if load_type == "assisted":
         return max(bw - weight_kg, 0.0)
     return None  # time
+
+
+def _load(load_type: str, s: SetData, fallback_bw: float | None) -> float | None:
+    bw = s.body_weight_kg if s.body_weight_kg is not None else fallback_bw
+    return effective_load(load_type, s.weight_kg, bw)
 
 
 def _mayhew(reps: float) -> float:
@@ -83,6 +92,11 @@ def _working(sets: list[SetData]) -> list[SetData]:
     return [s for s in sets if not s.is_warmup and s.reps > 0]
 
 
+def _ranked(sets: list[SetData]) -> list[SetData]:
+    """Arbeitssätze, die für Maxima zählen (ohne Drop- und Backoff-Sätze)."""
+    return [s for s in _working(sets) if s.set_type == "normal"]
+
+
 def session_metrics(
     sets: list[SetData], load_type: str, body_weight_kg: float | None
 ) -> dict | None:
@@ -118,11 +132,11 @@ def session_metrics(
     best_load = 0.0
     top_load_set: tuple[float, SetData] | None = None
     for s in working:
-        load = effective_load(load_type, s.weight_kg, body_weight_kg) or 0.0
+        load = _load(load_type, s, body_weight_kg) or 0.0
         volume += s.reps * load
         if top_load_set is None or (load, s.reps) > (top_load_set[0], top_load_set[1].reps):
             top_load_set = (load, s)
-        est = e1rm(load, s.reps, s.rpe)
+        est = e1rm(load, s.reps, s.rpe) if s.set_type == "normal" else None
         if est is not None and (best_e1 is None or est > best_e1):
             best_e1, best_set, best_load = est, s, load
     if best_set is None and top_load_set is not None:
@@ -151,13 +165,13 @@ def history(sets: list[SetData], load_type: str, body_weight_kg: float | None) -
 def records(sets: list[SetData], load_type: str, body_weight_kg: float | None) -> list[dict]:
     """Höchste Last in einem Arbeitssatz mit mindestens n Wiederholungen (n = 1, 5, 8, 13)."""
     result = []
-    working = _working(sets)
+    working = _ranked(sets)
     for n in RECORD_TARGETS:
         best: tuple[float, SetData] | None = None
         for s in working:
             if s.reps < n:
                 continue
-            load = effective_load(load_type, s.weight_kg, body_weight_kg)
+            load = _load(load_type, s, body_weight_kg)
             if load is None:
                 continue
             # bei Gleichstand zählt der frühere Satz (zuerst erreicht)
@@ -179,7 +193,7 @@ def new_records(
 ) -> list[int]:
     """Welche n-Rekorde bricht ein neuer Arbeitssatz? Ohne Vorgeschichte gibt es keinen Rekord."""
     load = effective_load(load_type, weight_kg, bw)
-    prev_working = _working(previous)
+    prev_working = _ranked(previous)
     if load is None or not prev_working or reps < 1:
         return []
     broken = []
@@ -187,11 +201,7 @@ def new_records(
         if reps < n:
             continue
         prev_best = max(
-            (
-                effective_load(load_type, p.weight_kg, bw) or 0.0
-                for p in prev_working
-                if p.reps >= n
-            ),
+            (_load(load_type, p, bw) or 0.0 for p in prev_working if p.reps >= n),
             default=None,
         )
         if prev_best is not None and load > prev_best:
@@ -223,6 +233,24 @@ def summary(rows: list[dict], now: datetime) -> dict:
         "change_4w_pct": pct(current, ref4),
         "change_12w_pct": pct(current, ref12),
     }
+
+
+SECONDARY_WEIGHT = 0.5  # ein Satz zählt für Nebenmuskeln halb
+
+
+def muscle_sets(entries: list[tuple[int | None, list[int]]], weeks: int) -> dict[int, float]:
+    """Gewichtete Sätze je Muskelgruppe und Woche.
+
+    entries: je Arbeitssatz (Primärmuskel, Nebenmuskeln). Primär zählt 1, jeder Nebenmuskel
+    SECONDARY_WEIGHT.
+    """
+    totals: dict[int, float] = defaultdict(float)
+    for primary, secondary in entries:
+        if primary is not None:
+            totals[primary] += 1
+        for m in set(secondary) - {primary}:
+            totals[m] += SECONDARY_WEIGHT
+    return {m: round(v / weeks, 1) for m, v in totals.items()}
 
 
 def week_start(d: datetime | date) -> date:
@@ -270,14 +298,14 @@ def rep_profile(
     Schätzung aus dem besten e1RM. Leer für Zeitübungen oder ohne e1RM."""
     if load_type == "time" or best_e1rm is None:
         return []
-    working = _working(sets)
+    working = _ranked(sets)
     out = []
     for n in range(1, PROFILE_MAX_REPS + 1):
         best: tuple[float, SetData] | None = None
         for s in working:
             if s.reps < n:
                 continue
-            load = effective_load(load_type, s.weight_kg, bw)
+            load = _load(load_type, s, bw)
             if load is None or load <= 0:
                 continue
             if best is None or load > best[0] or (load == best[0] and s.date < best[1].date):
@@ -299,7 +327,7 @@ def pr_events(sets: list[SetData], load_type: str, bw: float | None) -> list[dic
     keine Ereignisse. Aufwärmsätze zählen nie."""
     if load_type == "time":
         return []
-    working = sorted(_working(sets), key=lambda s: (s.date, s.set_number, s.set_id))
+    working = sorted(_ranked(sets), key=lambda s: (s.date, s.set_number, s.set_id))
     if not working:
         return []
     first_session = working[0].session_id
@@ -308,7 +336,7 @@ def pr_events(sets: list[SetData], load_type: str, bw: float | None) -> list[dic
     best_reps = 0
     events: list[dict] = []
     for s in working:
-        load = effective_load(load_type, s.weight_kg, bw)
+        load = _load(load_type, s, bw)
         found: list[dict] = []
         if load is not None and load > 0:
             est = e1rm(load, s.reps, s.rpe)
@@ -389,8 +417,8 @@ def lifetime(
     """Lebenszeit-Kennzahlen; rows sind die Session-Kennzahlen (aufsteigend nach Datum)."""
     working = _working(sets)
     heaviest: tuple[float, SetData] | None = None
-    for s in working:
-        load = effective_load(load_type, s.weight_kg, bw)
+    for s in _ranked(sets):
+        load = _load(load_type, s, bw)
         if load is None:
             continue
         if heaviest is None or (load, s.reps) > (heaviest[0], heaviest[1].reps):

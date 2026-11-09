@@ -93,6 +93,11 @@ const routeTree = rootRoute.addChildren([
     }),
     createRoute({
       getParentRoute: () => appRoute,
+      path: '/stats',
+      component: lazyRouteComponent(() => import('./routes/Stats'), 'StatsPage'),
+    }),
+    createRoute({
+      getParentRoute: () => appRoute,
       path: '/exercises',
       component: lazyRouteComponent(() => import('./routes/Exercises'), 'ExercisesPage'),
     }),

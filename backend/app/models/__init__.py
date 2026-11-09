@@ -31,6 +31,16 @@ class User(Base, table=True):
     avatar_updated_at: datetime | None = None
 
 
+class BodyWeightLog(Base, table=True):
+    """Körpergewicht-Verlauf; ein Eintrag pro Tag und User."""
+
+    __tablename__ = "body_weight_log"
+    __table_args__ = (UniqueConstraint("user_id", "measured_on"),)
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
+    measured_on: date
+    weight_kg: float
+
+
 class UserAvatar(Base, table=True):
     __tablename__ = "user_avatar"
     __table_args__ = (UniqueConstraint("user_id"),)
@@ -135,6 +145,8 @@ class PlanExercise(Base, table=True):
     target_reps_max: int = 12
     target_rest_sec: int = 90
     note: str = ""
+    #: Aufeinanderfolgende Einträge mit gleicher Nummer bilden einen Supersatz
+    group_no: int | None = None
 
 
 class WorkoutSession(Base, table=True):
@@ -157,6 +169,7 @@ class SessionExercise(Base, table=True):
     exercise_id: int = Field(foreign_key="exercise.id", ondelete="RESTRICT")
     position: int = 0
     note: str = ""
+    group_no: int | None = None  # Supersatz wie bei PlanExercise
 
 
 class SetLog(Base, table=True):
@@ -175,6 +188,8 @@ class SetLog(Base, table=True):
     rest_sec: int | None = None
     rpe: float | None = None
     is_warmup: bool = False
+    #: normal, drop oder backoff; Drop-/Backoff-Sätze zählen nicht für e1RM und Rekorde
+    set_type: str = Field(default="normal", sa_column_kwargs={"server_default": "normal"})
     completed_at: datetime = Field(default_factory=utcnow)
 
 

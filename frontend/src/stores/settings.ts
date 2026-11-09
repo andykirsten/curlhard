@@ -11,6 +11,8 @@ interface SettingsState {
   theme: Theme
   /** Vorhandene Scheiben (kg) für den Scheibenrechner */
   plates: number[]
+  /** Zeitpunkt (ms), an dem der Deload-Hinweis ausgeblendet wurde */
+  deloadDismissedAt: number | null
   set: (patch: Partial<Omit<SettingsState, 'set'>>) => void
 }
 
@@ -21,6 +23,7 @@ export const useSettings = create<SettingsState>()(
       weightStep: 2.5,
       theme: 'system',
       plates: DEFAULT_PLATES,
+      deloadDismissedAt: null,
       set: (patch) => set(patch),
     }),
     { name: 'curlhard-settings' },

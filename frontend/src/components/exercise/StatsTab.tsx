@@ -3,6 +3,7 @@ import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react'
 import {
   useExerciseHistory,
   useExerciseInsights,
+  useExerciseSummary,
   useGetNote,
   usePutNote,
   type InsightsRead,
@@ -68,6 +69,7 @@ export function StatsTab({
   }, [rangeKey])
   const history = useExerciseHistory(exerciseId, { from, metric: 'e1rm' })
   const ranged = useExerciseInsights(exerciseId, { from })
+  const summary = useExerciseSummary(exerciseId)
   const note = useGetNote(exerciseId)
   const putNote = usePutNote()
   const [draft, setDraft] = useState<string | null>(null)
@@ -152,7 +154,13 @@ export function StatsTab({
             )}
           </div>
 
-          {insights && <LifetimeTiles lifetime={insights.lifetime} loadType={loadType} />}
+          {insights && (
+            <LifetimeTiles
+              lifetime={insights.lifetime}
+              loadType={loadType}
+              relativeE1rm={summary.data?.relative_e1rm}
+            />
+          )}
           {insights && <PrTimeline events={insights.pr_events} loadType={loadType} />}
         </>
       )}

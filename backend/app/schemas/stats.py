@@ -38,6 +38,8 @@ class SummaryRead(BaseModel):
     change_12w_pct: float | None
     session_count: int
     last_session: SessionMetrics | None
+    #: e1RM geteilt durch das aktuelle Körpergewicht (nur Gewichtsübungen)
+    relative_e1rm: float | None = None
 
 
 class HistoryRead(BaseModel):
@@ -69,10 +71,22 @@ class OverviewRead(BaseModel):
     weeks: list[WeekOverview]
 
 
+class DeloadExercise(BaseModel):
+    exercise_id: int
+    name: str
+    reason: Literal["e1rm_falling", "rpe_rising"]
+
+
+class DeloadRead(BaseModel):
+    recommended: bool
+    exercises: list[DeloadExercise]
+
+
 class LastSet(BaseModel):
     reps: int
     weight_kg: float
     is_warmup: bool
+    set_type: Literal["normal", "drop", "backoff"] = "normal"
     rpe: float | None
 
 
@@ -146,6 +160,28 @@ class PrEvent(BaseModel):
     value: float
 
 
+class PrFeedItem(PrEvent):
+    exercise_id: int
+    exercise_name: str
+    load_type: str
+
+
+class PrFeedRead(BaseModel):
+    items: list[PrFeedItem]
+
+
+class BalanceRow(BaseModel):
+    muscle_group_id: int
+    name: str
+    #: gewichtete Arbeitssätze pro Woche (Primärmuskel 1, Nebenmuskel 0,5)
+    sets_per_week: float
+
+
+class BalanceRead(BaseModel):
+    weeks: int
+    muscle_groups: list[BalanceRow]
+
+
 class RepRanges(BaseModel):
     strength: int
     hypertrophy: int
@@ -195,6 +231,7 @@ class LogSet(BaseModel):
     weight_kg: float
     rpe: float | None
     is_warmup: bool
+    set_type: Literal["normal", "drop", "backoff"] = "normal"
     records: list[PrMark]
 
 

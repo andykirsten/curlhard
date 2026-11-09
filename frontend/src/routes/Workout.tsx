@@ -49,6 +49,8 @@ import { WorkoutHeader } from '@/components/workout/WorkoutHeader'
 import { plateLoad, plateSummary } from '@/lib/plates'
 import { errorMessage } from '@/lib/query'
 import { useBarWeight } from '@/lib/useBarWeight'
+import { kindFields, kindOf, type SetKind, type SetType } from '@/lib/setKind'
+import { groupRuns } from '@/lib/superset'
 import { warmupSets } from '@/lib/warmup'
 import { formatWeight } from '@/lib/weight'
 import { compareLabel, e1rm, exerciseProgress, exerciseVolume, proposalFor } from '@/lib/workout'
@@ -180,6 +182,7 @@ function ExerciseFocus({
   prevSets,
   prevLabel,
   suggestion,
+  group,
   recordsBySet,
   onRecords,
   onRecordMoment,
@@ -200,6 +203,8 @@ function ExerciseFocus({
   prevLabel: string
   /** Progressions-Vorschlag des Backends (nur mit Plan-Übung und Historie) */
   suggestion: Suggestion | null
+  /** Supersatz: Rundenlogik (Rest erst nach der letzten Übung der Gruppe) */
+  group: { label: string; midRound: boolean; restSec: number; advance: () => void } | null
   recordsBySet: Record<number, number[]>
   onRecords: (setId: number, records: number[]) => void
   onRecordMoment: (moment: RecordMomentData) => void
@@ -266,12 +271,15 @@ function ExerciseFocus({
   const [weight, setWeight] = useState(start.weight)
   const [reps, setReps] = useState(start.reps)
   const [warmup, setWarmup] = useState(start.warmup)
+  const [setType, setSetType] = useState<SetType>('normal')
+  const kind: SetKind = warmup ? 'warmup' : setType
   const [rpe, setRpe] = useState<number | null>(null)
   if (seed !== seedKey) {
     setSeed(seedKey)
     setWeight(start.weight)
     setReps(start.reps)
     setWarmup(start.warmup)
+    setSetType('normal')
     setRpe(null)
   }
 
@@ -312,8 +320,13 @@ function ExerciseFocus({
           }
         : old,
     )
-    if (!v.is_warmup && !session.finished_at) startRest(restSec)
+    if (!v.is_warmup && !session.finished_at) {
+      // Supersatz: Pause erst nach der letzten Übung der Runde, davor direkt zur nächsten Übung
+      if (!group?.midRound) startRest(group?.restSec ?? restSec)
+      group?.advance()
+    }
     setWarmup(false)
+    setSetType('normal')
     addSet.mutate(
       { seId: se.id, data: v },
       {
@@ -361,7 +374,8 @@ function ExerciseFocus({
         reps,
         weight_kg: loadType === 'time' ? 0 : weight,
         is_warmup: warmup,
-        prev: warmup ? undefined : prevSets[working.length],
+        set_type: setType,
+        prev: kind !== 'normal' ? undefined : prevSets[working.length],
       }
 
   // Wischen wechselt die Übung (horizontal, > 60 px)
@@ -457,6 +471,11 @@ function ExerciseFocus({
         >
           {memo ? `Memo: ${memo}` : se.note ? `Session-Memo: ${se.note}` : 'Memo hinzufügen'}
         </button>
+        {group && (
+          <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+            {group.label}
+          </p>
+        )}
         <p
           className="mt-1 mb-2 truncate text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
           data-testid="prev-source"
@@ -561,13 +580,16 @@ function ExerciseFocus({
         <InputDock
           weight={weight}
           reps={reps}
-          warmup={warmup}
+          kind={kind}
           rpe={rpe}
           weightStep={weightStep}
           loadType={loadType}
           onWeight={setWeight}
           onReps={setReps}
-          onWarmup={setWarmup}
+          onKind={(k) => {
+            setWarmup(k === 'warmup')
+            setSetType(k === 'drop' || k === 'backoff' ? k : 'normal')
+          }}
           onRpe={setRpe}
           plates={
             bar != null && plates.length > 0
@@ -581,7 +603,7 @@ function ExerciseFocus({
             void log({
               reps,
               weight_kg: loadType === 'time' ? 0 : weight,
-              is_warmup: warmup,
+              ...kindFields(kind),
               rpe: loadType === 'time' || warmup ? null : rpe,
             })
           }
@@ -694,7 +716,7 @@ function ExerciseFocus({
             <SetEntry
               initialReps={editing.reps}
               initialWeight={editing.weight_kg}
-              initialWarmup={editing.is_warmup}
+              initialKind={kindOf(editing)}
               initialRpe={editing.rpe}
               weightStep={weightStep}
               loadType={loadType}
@@ -778,6 +800,31 @@ export function WorkoutPage() {
   const next = session.exercises[index + 1]
   const go = (delta: 1 | -1) =>
     setFocusIndex(Math.min(Math.max(0, index + delta), Math.max(0, count - 1)))
+
+  // Supersätze: Läufe gleicher group_no; nach der letzten Übung geht es zur ersten offenen der Runde
+  const runs = groupRuns(session.exercises)
+  const run = runs[index]
+  const groupStart = run ? index - run.pos + 1 : 0
+  const members = run ? session.exercises.slice(groupStart, groupStart + run.size) : []
+  const memberDone = (e: SessionExerciseRead, extra: number) => {
+    const target = planned.get(e.exercise_id)?.target_sets
+    return target != null && exerciseProgress(e.sets, target).done + extra >= target
+  }
+  const group =
+    run && !finished
+      ? {
+          label: `Supersatz ${run.letter}${run.pos} von ${run.size}`,
+          midRound: run.pos < run.size,
+          restSec: Math.max(
+            ...members.map((e) => planned.get(e.exercise_id)?.target_rest_sec ?? defaultRest),
+          ),
+          advance: () => {
+            if (run.pos < run.size) return go(1)
+            const open = members.findIndex((e, k) => !memberDone(e, k === run.pos - 1 ? 1 : 0))
+            setFocusIndex(open >= 0 ? groupStart + open : Math.min(groupStart + run.size, count - 1))
+          },
+        }
+      : null
 
   const isEditing = editing && count > 0 && !finished
 
@@ -873,8 +920,9 @@ export function WorkoutPage() {
         )}
         {count > 0 && (
           <ExerciseStrip
-            items={session.exercises.map((x) => ({
+            items={session.exercises.map((x, i) => ({
               id: x.id,
+              group: runs[i],
               name: byId.get(x.exercise_id)?.name ?? `Übung ${x.exercise_id}`,
               progress: exerciseProgress(x.sets, planned.get(x.exercise_id)?.target_sets),
             }))}
@@ -913,6 +961,7 @@ export function WorkoutPage() {
             restSec={plan?.target_rest_sec ?? defaultRest}
             prevSets={plan?.sets.filter((x) => !x.is_warmup) ?? []}
             suggestion={plan?.suggestion ?? null}
+            group={group}
             prevLabel={
               previous.isPending ? ' ' : compareLabel(plan, previous.data?.plan_day_name)
             }

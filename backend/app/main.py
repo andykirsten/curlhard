@@ -13,6 +13,7 @@ from app.routers import (
     admin,
     app_config,
     auth,
+    body_weight,
     cycles,
     exercises,
     plans,
@@ -95,6 +96,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         users,
         sessions,
         stats,
+        body_weight,
         account,
     ):
         v1.include_router(module.router)

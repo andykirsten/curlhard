@@ -79,6 +79,7 @@ def session_read(db: Session, user_id: int, ws: WorkoutSession) -> SessionRead:
                 exercise_id=e.exercise_id,
                 position=e.position,
                 note=e.note,
+                group_no=e.group_no,
                 sets=by_ex[e.id],  # type: ignore[index]
             )
             for e in exercises
@@ -168,7 +169,13 @@ def _cycle_ref(db: Session, user_id: int) -> dict | None:
 
 def _last_set_dicts(prev: PreviousSets) -> list[dict]:
     return [
-        {"reps": s.reps, "weight_kg": s.weight_kg, "is_warmup": s.is_warmup, "rpe": s.rpe}
+        {
+            "reps": s.reps,
+            "weight_kg": s.weight_kg,
+            "is_warmup": s.is_warmup,
+            "set_type": s.set_type,
+            "rpe": s.rpe,
+        }
         for s in prev.sets
     ]
 
@@ -203,6 +210,7 @@ def create_session(body: SessionCreate, user: CurrentUser, db: DbSession):
                     session_id=ws.id,  # type: ignore[arg-type]
                     exercise_id=pe.exercise_id,
                     position=pos,
+                    group_no=pe.group_no,
                 )
             )
     db.commit()
@@ -391,6 +399,7 @@ def add_session_exercise(
         exercise_id=se.exercise_id,
         position=se.position,
         note=se.note,
+        group_no=se.group_no,
     )
 
 
@@ -428,6 +437,7 @@ def update_session_exercise(
         exercise_id=se.exercise_id,
         position=se.position,
         note=se.note,
+        group_no=se.group_no,
         sets=[_set_read(s) for s in sets],
     )
 
@@ -444,7 +454,7 @@ def delete_session_exercise(se_id: int, user: CurrentUser, db: DbSession):
 
 
 def _records_for(db: Session, user: User, s: SetLog, exercise: Exercise) -> list[int]:
-    if s.is_warmup:
+    if s.is_warmup or s.set_type != "normal":
         return []
     previous = load_sets(db, user.id, s.exercise_id, exclude_set_id=s.id)  # type: ignore[arg-type]
     return stats.new_records(previous, s.reps, s.weight_kg, exercise.load_type, user.body_weight_kg)
@@ -473,6 +483,7 @@ def add_set(se_id: int, body: SetCreate, user: CurrentUser, db: DbSession):
         rest_sec=body.rest_sec,
         rpe=body.rpe,
         is_warmup=body.is_warmup,
+        set_type=body.set_type,
         completed_at=body.completed_at or utcnow(),
     )
     exercise = db.get(Exercise, se.exercise_id)
@@ -481,7 +492,7 @@ def add_set(se_id: int, body: SetCreate, user: CurrentUser, db: DbSession):
     previous = load_sets(db, user.id, se.exercise_id)  # type: ignore[arg-type]
     records = (
         []
-        if s.is_warmup
+        if s.is_warmup or s.set_type != "normal"
         else stats.new_records(
             previous, s.reps, s.weight_kg, exercise.load_type, user.body_weight_kg
         )

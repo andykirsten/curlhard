@@ -10,6 +10,7 @@ import {
   useToday,
   type TodayExercise,
 } from '@/api'
+import { DeloadCard } from '@/components/DeloadCard'
 import { EmptyState, PageHeader, Spinner } from '@/components/Layout'
 import { WeekStrip } from '@/components/WeekStrip'
 import { Avatar } from '@/components/ui/avatar'
@@ -160,6 +161,8 @@ export function TodayPage() {
             </CardContent>
           </Card>
         )}
+
+        <DeloadCard className="border-primary lg:col-span-2" />
 
         {!data?.plan && (
           <EmptyState

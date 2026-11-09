@@ -3,12 +3,15 @@ import { useState } from 'react'
 import { RpePicker } from '@/components/RpePicker'
 import { Stepper } from '@/components/Stepper'
 import { Button } from '@/components/ui/button'
+import { Segmented } from '@/components/ui/segmented'
+import { kindFields, SET_KINDS, type SetKind, type SetType } from '@/lib/setKind'
 import { formatWeight } from '@/lib/weight'
 
 export interface SetValues {
   reps: number
   weight_kg: number
   is_warmup: boolean
+  set_type: SetType
   /** Anstrengung 6–10, null = nicht angegeben (bei Aufwärm- und Zeitsätzen immer null) */
   rpe: number | null
 }
@@ -19,7 +22,7 @@ interface SetEntryProps {
   weightStep: number
   loadType?: string
   disabled?: boolean
-  initialWarmup?: boolean
+  initialKind?: SetKind
   initialRpe?: number | null
   submitLabel?: string
   onSubmit: (values: SetValues) => void
@@ -32,14 +35,15 @@ export function SetEntry({
   weightStep,
   loadType = 'weight',
   disabled,
-  initialWarmup = false,
+  initialKind = 'normal',
   initialRpe = null,
   submitLabel = 'Satz abhaken',
   onSubmit,
 }: SetEntryProps) {
   const [reps, setReps] = useState(initialReps)
   const [weight, setWeight] = useState(initialWeight)
-  const [warmup, setWarmup] = useState(initialWarmup)
+  const [kind, setKind] = useState<SetKind>(initialKind)
+  const warmup = kind === 'warmup'
   const [rpe, setRpe] = useState<number | null>(initialRpe)
   const isTime = loadType === 'time'
 
@@ -64,16 +68,13 @@ export function SetEntry({
         )}
       </div>
       {!isTime && !warmup && <RpePicker value={rpe} onChange={setRpe} />}
-      <div className="flex items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="h-5 w-5"
-            checked={warmup}
-            onChange={(e) => setWarmup(e.target.checked)}
-          />
-          Aufwärmsatz
-        </label>
+      <Segmented
+        aria-label="Satzart"
+        value={kind}
+        onChange={(v) => setKind(v as SetKind)}
+        options={SET_KINDS.map((k) => ({ value: k.value, label: k.name }))}
+      />
+      <div className="flex items-center justify-end gap-3">
         <Button
           type="button"
           size="lg"
@@ -82,7 +83,7 @@ export function SetEntry({
             onSubmit({
               reps,
               weight_kg: isTime ? 0 : weight,
-              is_warmup: warmup,
+              ...kindFields(kind),
               rpe: isTime || warmup ? null : rpe,
             })
           }

@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
@@ -15,6 +16,7 @@ from app.schemas.auth import (
     UserUpdate,
 )
 from app.services import auth as auth_service
+from app.services import body_weight as body_weight_service
 from app.services import invites
 from app.services.avatar import MAX_AVATAR_BYTES, detect_image_type
 
@@ -88,8 +90,15 @@ def me(user: CurrentUser):
 
 @router.patch("/me", response_model=UserRead)
 def update_me(body: UserUpdate, user: CurrentUser, db: DbSession):
-    for key, value in body.model_dump(exclude_unset=True).items():
+    data = body.model_dump(exclude_unset=True)
+    weight = data.pop("body_weight_kg", None)
+    for key, value in data.items():
         setattr(user, key, value)
+    if weight is not None:
+        # Das Einstellungsfeld schreibt in den Verlauf (heute); das aktuelle Gewicht folgt
+        body_weight_service.set_weight(db, user, date.today(), weight)
+    elif "body_weight_kg" in body.model_fields_set:
+        user.body_weight_kg = None
     db.add(user)
     db.commit()
     db.refresh(user)

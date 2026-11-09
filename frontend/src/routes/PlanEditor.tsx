@@ -3,7 +3,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities'
 import { useQueryClient } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
-import { GripVertical, Plus, Trash2 } from 'lucide-react'
+import { GripVertical, Link2, Link2Off, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -34,6 +34,7 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { WEEKDAYS, WEEKDAYS_SHORT } from '@/lib/dates'
 import { reorderIds } from '@/lib/reorder'
+import { groupRuns, toggleLink } from '@/lib/superset'
 import { errorMessage } from '@/lib/query'
 import { useSortSensors } from '@/lib/useSortSensors'
 
@@ -218,6 +219,7 @@ function DayCard({
   const refresh = () => queryClient.invalidateQueries()
   const fail = (e: unknown) => toast.error(errorMessage(e))
   const ids = day.exercises.map((e) => e.id)
+  const runs = groupRuns(day.exercises)
   // Wochentage, die schon ein anderer Trainingstag dieses Plans belegt (erster gewinnt)
   const taken: Partial<Record<number, string>> = {}
   for (const d of plan.days) {
@@ -231,6 +233,31 @@ function DayCard({
       days: plan.days.map((d) => (d.id === day.id ? { ...d, weekdays } : d)),
     })
     updateDay.mutate({ dayId: day.id, data: { weekdays } }, { onSettled: refresh, onError: fail })
+  }
+
+  const linkNext = (index: number) => {
+    const changes = toggleLink(day.exercises, index)
+    if (changes.length === 0) return
+    const byChange = new Map(changes.map((c) => [c.id, c.group_no]))
+    // Optimistisch setzen, damit die Gruppenlinie sofort erscheint
+    queryClient.setQueryData<PlanRead>(key, {
+      ...plan,
+      days: plan.days.map((d) =>
+        d.id === day.id
+          ? {
+              ...d,
+              exercises: d.exercises.map((x) =>
+                byChange.has(x.id) ? { ...x, group_no: byChange.get(x.id) ?? null } : x,
+              ),
+            }
+          : d,
+      ),
+    })
+    for (const c of changes)
+      updateEx.mutate(
+        { peId: c.id, data: { group_no: c.group_no } },
+        { onSettled: refresh, onError: fail },
+      )
   }
 
   const onDragEnd = (e: DragEndEvent) => {
@@ -281,10 +308,15 @@ function DayCard({
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={ids} strategy={verticalListSortingStrategy}>
             <ul className="space-y-2">
-              {day.exercises.map((pe) => (
+              {day.exercises.map((pe, i) => {
+                const run = runs[i]
+                const linked = run != null && i + 1 < day.exercises.length && runs[i + 1]?.letter === run.letter
+                return (
                 <SortableRow key={pe.id} id={pe.id}>
                   {(h) => (
-                    <div className="flex items-center gap-1 rounded-md border bg-background pr-1">
+                    <div
+                      className={`flex items-center gap-1 rounded-md border bg-background pr-1 ${run ? 'border-l-4 border-l-primary' : ''}`}
+                    >
                       {h}
                       <button
                         type="button"
@@ -299,7 +331,32 @@ function DayCard({
                           {pe.target_sets} × {pe.target_reps_min}–{pe.target_reps_max} ·{' '}
                           {pe.target_rest_sec} s
                         </div>
+                        {run && (
+                          <div className="text-xs font-bold uppercase tracking-[0.08em] text-primary">
+                            Supersatz {run.letter}
+                            {run.pos}
+                          </div>
+                        )}
                       </button>
+                      {i + 1 < day.exercises.length && (
+                        <button
+                          type="button"
+                          aria-label={
+                            linked
+                              ? 'Supersatz mit nächster Übung lösen'
+                              : 'Mit nächster Übung als Supersatz verbinden'
+                          }
+                          aria-pressed={linked}
+                          className="flex h-11 w-11 items-center justify-center rounded-md hover:bg-accent"
+                          onClick={() => linkNext(i)}
+                        >
+                          {linked ? (
+                            <Link2Off className="h-4 w-4" />
+                          ) : (
+                            <Link2 className="h-4 w-4" />
+                          )}
+                        </button>
+                      )}
                       <button
                         type="button"
                         aria-label="Übung entfernen"
@@ -313,7 +370,8 @@ function DayCard({
                     </div>
                   )}
                 </SortableRow>
-              ))}
+                )
+              })}
             </ul>
           </SortableContext>
         </DndContext>

@@ -66,9 +66,39 @@ export interface AuthorRead {
   avatar_url: string | null;
 }
 
+export interface BalanceRow {
+  muscle_group_id: number;
+  name: string;
+  sets_per_week: number;
+}
+
+export interface BalanceRead {
+  weeks: number;
+  muscle_groups: BalanceRow[];
+}
+
 export interface BestSet {
   reps: number;
   weight_kg: number;
+}
+
+export interface BodyWeightCreate {
+  measured_on?: string | null;
+  /**
+     * @maximum 700
+     * @exclusiveMinimum 0
+     */
+  weight_kg: number;
+}
+
+export interface BodyWeightRead {
+  id: number;
+  measured_on: string;
+  weight_kg: number;
+}
+
+export interface BodyImportHevy {
+  file: Blob | File;
 }
 
 export interface BodyUploadAvatar {
@@ -133,6 +163,25 @@ export interface DayRef {
   id: number;
   name: string;
   weekdays: number[];
+}
+
+export type DeloadExerciseReason = typeof DeloadExerciseReason[keyof typeof DeloadExerciseReason];
+
+
+export const DeloadExerciseReason = {
+  e1rm_falling: 'e1rm_falling',
+  rpe_rising: 'rpe_rising',
+} as const;
+
+export interface DeloadExercise {
+  exercise_id: number;
+  name: string;
+  reason: DeloadExerciseReason;
+}
+
+export interface DeloadRead {
+  recommended: boolean;
+  exercises: DeloadExercise[];
 }
 
 export type ExerciseCreateLoadType = typeof ExerciseCreateLoadType[keyof typeof ExerciseCreateLoadType];
@@ -239,6 +288,16 @@ export interface HistoryRead {
   points: HistoryPoint[];
 }
 
+export interface ImportResult {
+  dry_run: boolean;
+  sessions: number;
+  sets: number;
+  exercises_created: number;
+  exercises_reused: number;
+  sessions_skipped: number;
+  rows_skipped: number;
+}
+
 export interface RepProfilePoint {
   reps: number;
   actual_kg: number | null;
@@ -324,12 +383,31 @@ export interface InviteRead {
   created_at: string;
 }
 
+export type LastSetSetType = typeof LastSetSetType[keyof typeof LastSetSetType];
+
+
+export const LastSetSetType = {
+  normal: 'normal',
+  drop: 'drop',
+  backoff: 'backoff',
+} as const;
+
 export interface LastSet {
   reps: number;
   weight_kg: number;
   is_warmup: boolean;
+  set_type?: LastSetSetType;
   rpe: number | null;
 }
+
+export type LogSetSetType = typeof LogSetSetType[keyof typeof LogSetSetType];
+
+
+export const LogSetSetType = {
+  normal: 'normal',
+  drop: 'drop',
+  backoff: 'backoff',
+} as const;
 
 export type PrMarkKind = typeof PrMarkKind[keyof typeof PrMarkKind];
 
@@ -351,6 +429,7 @@ export interface LogSet {
   weight_kg: number;
   rpe: number | null;
   is_warmup: boolean;
+  set_type?: LogSetSetType;
   records: PrMark[];
 }
 
@@ -476,6 +555,7 @@ export interface PlanExerciseRead {
   target_reps_max: number;
   target_rest_sec: number;
   note: string;
+  group_no?: number | null;
 }
 
 export interface PlanDayRead {
@@ -515,6 +595,7 @@ export interface PlanExerciseCreate {
      */
   target_rest_sec?: number;
   note?: string;
+  group_no?: number | null;
 }
 
 export interface PlanExerciseUpdate {
@@ -524,6 +605,7 @@ export interface PlanExerciseUpdate {
   target_reps_max?: number | null;
   target_rest_sec?: number | null;
   note?: string | null;
+  group_no?: number | null;
 }
 
 export interface PlanRead {
@@ -544,6 +626,30 @@ export interface PlanUpdate {
   name?: string | null;
   description?: string | null;
   is_public?: boolean | null;
+}
+
+export type PrFeedItemKind = typeof PrFeedItemKind[keyof typeof PrFeedItemKind];
+
+
+export const PrFeedItemKind = {
+  e1rm: 'e1rm',
+  nrm: 'nrm',
+  reps: 'reps',
+} as const;
+
+export interface PrFeedItem {
+  date: string;
+  session_id: number;
+  kind: PrFeedItemKind;
+  reps: number | null;
+  value: number;
+  exercise_id: number;
+  exercise_name: string;
+  load_type: string;
+}
+
+export interface PrFeedRead {
+  items: PrFeedItem[];
 }
 
 export type SuggestionKind = typeof SuggestionKind[keyof typeof SuggestionKind];
@@ -643,6 +749,15 @@ export interface SessionExerciseCreate {
   exercise_id: number;
 }
 
+export type SetReadSetType = typeof SetReadSetType[keyof typeof SetReadSetType];
+
+
+export const SetReadSetType = {
+  normal: 'normal',
+  drop: 'drop',
+  backoff: 'backoff',
+} as const;
+
 export interface SetRead {
   id: number;
   session_exercise_id: number;
@@ -653,6 +768,7 @@ export interface SetRead {
   rest_sec: number | null;
   rpe: number | null;
   is_warmup: boolean;
+  set_type: SetReadSetType;
   completed_at: string;
   records: number[];
 }
@@ -663,6 +779,7 @@ export interface SessionExerciseRead {
   exercise_id: number;
   position: number;
   note: string;
+  group_no: number | null;
   sets: SetRead[];
 }
 
@@ -706,6 +823,15 @@ export interface SessionUpdate {
   finished_at?: string | null;
 }
 
+export type SetCreateSetType = typeof SetCreateSetType[keyof typeof SetCreateSetType];
+
+
+export const SetCreateSetType = {
+  normal: 'normal',
+  drop: 'drop',
+  backoff: 'backoff',
+} as const;
+
 export interface SetCreate {
   /**
      * @minimum 0
@@ -721,8 +847,18 @@ export interface SetCreate {
   rest_sec?: number | null;
   rpe?: number | null;
   is_warmup?: boolean;
+  set_type?: SetCreateSetType;
   completed_at?: string | null;
 }
+
+export type SetUpdateSetType = typeof SetUpdateSetType[keyof typeof SetUpdateSetType] | null;
+
+
+export const SetUpdateSetType = {
+  normal: 'normal',
+  drop: 'drop',
+  backoff: 'backoff',
+} as const;
 
 export interface SetUpdate {
   reps?: number | null;
@@ -731,6 +867,7 @@ export interface SetUpdate {
   rest_sec?: number | null;
   rpe?: number | null;
   is_warmup?: boolean | null;
+  set_type?: SetUpdateSetType;
   completed_at?: string | null;
 }
 
@@ -745,6 +882,7 @@ export interface SummaryRead {
   change_12w_pct: number | null;
   session_count: number;
   last_session: SessionMetrics | null;
+  relative_e1rm?: number | null;
 }
 
 export interface TodayExercise {
@@ -862,12 +1000,37 @@ before?: string | null;
 limit?: number;
 };
 
+export type BalanceParams = {
+/**
+ * @minimum 1
+ * @maximum 26
+ */
+weeks?: number;
+};
+
+export type PrFeedParams = {
+/**
+ * @minimum 1
+ * @maximum 100
+ */
+limit?: number;
+};
+
 export type OverviewParams = {
 /**
  * @minimum 1
  * @maximum 104
  */
 weeks?: number;
+};
+
+export type ListBodyWeightParams = {
+from?: string | null;
+to?: string | null;
+};
+
+export type ImportHevyParams = {
+dry_run?: boolean;
 };
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -7609,6 +7772,325 @@ export function useExerciseLog<TData = Awaited<ReturnType<typeof exerciseLog>>, 
 
 
 
+export const getDeloadUrl = () => {
+
+
+
+
+  return `/api/v1/stats/deload`
+}
+
+/**
+ * @summary Deload
+ */
+export const deload = async ( options?: Parameters<typeof customFetch>[1]): Promise<DeloadRead> => {
+
+  return customFetch<DeloadRead>(getDeloadUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeloadQueryKey = () => {
+    return [
+    `/api/v1/stats/deload`
+    ] as const;
+    }
+
+
+export const getDeloadQueryOptions = <TData = Awaited<ReturnType<typeof deload>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDeloadQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof deload>>> = ({ signal }) => deload({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DeloadQueryResult = NonNullable<Awaited<ReturnType<typeof deload>>>
+export type DeloadQueryError = ErrorType<unknown>
+
+
+export function useDeload<TData = Awaited<ReturnType<typeof deload>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof deload>>,
+          TError,
+          Awaited<ReturnType<typeof deload>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDeload<TData = Awaited<ReturnType<typeof deload>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof deload>>,
+          TError,
+          Awaited<ReturnType<typeof deload>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDeload<TData = Awaited<ReturnType<typeof deload>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Deload
+ */
+
+export function useDeload<TData = Awaited<ReturnType<typeof deload>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDeloadQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getBalanceUrl = (params?: BalanceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/stats/balance?${stringifiedParams}` : `/api/v1/stats/balance`
+}
+
+/**
+ * Arbeitssätze je Muskelgruppe und Woche (Durchschnitt über die letzten `weeks` Wochen).
+ * @summary Balance
+ */
+export const balance = async (params?: BalanceParams, options?: Parameters<typeof customFetch>[1]): Promise<BalanceRead> => {
+
+  return customFetch<BalanceRead>(getBalanceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getBalanceQueryKey = (params?: BalanceParams,) => {
+    return [
+    `/api/v1/stats/balance`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getBalanceQueryOptions = <TData = Awaited<ReturnType<typeof balance>>, TError = ErrorType<HTTPValidationError>>(params?: BalanceParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balance>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBalanceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof balance>>> = ({ signal }) => balance(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof balance>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type BalanceQueryResult = NonNullable<Awaited<ReturnType<typeof balance>>>
+export type BalanceQueryError = ErrorType<HTTPValidationError>
+
+
+export function useBalance<TData = Awaited<ReturnType<typeof balance>>, TError = ErrorType<HTTPValidationError>>(
+ params: undefined |  BalanceParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof balance>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balance>>,
+          TError,
+          Awaited<ReturnType<typeof balance>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalance<TData = Awaited<ReturnType<typeof balance>>, TError = ErrorType<HTTPValidationError>>(
+ params?: BalanceParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balance>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof balance>>,
+          TError,
+          Awaited<ReturnType<typeof balance>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useBalance<TData = Awaited<ReturnType<typeof balance>>, TError = ErrorType<HTTPValidationError>>(
+ params?: BalanceParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balance>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Balance
+ */
+
+export function useBalance<TData = Awaited<ReturnType<typeof balance>>, TError = ErrorType<HTTPValidationError>>(
+ params?: BalanceParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof balance>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getBalanceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getPrFeedUrl = (params?: PrFeedParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/stats/prs?${stringifiedParams}` : `/api/v1/stats/prs`
+}
+
+/**
+ * Rekorde über alle Übungen, neueste zuerst.
+ * @summary Pr Feed
+ */
+export const prFeed = async (params?: PrFeedParams, options?: Parameters<typeof customFetch>[1]): Promise<PrFeedRead> => {
+
+  return customFetch<PrFeedRead>(getPrFeedUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPrFeedQueryKey = (params?: PrFeedParams,) => {
+    return [
+    `/api/v1/stats/prs`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getPrFeedQueryOptions = <TData = Awaited<ReturnType<typeof prFeed>>, TError = ErrorType<HTTPValidationError>>(params?: PrFeedParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof prFeed>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPrFeedQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof prFeed>>> = ({ signal }) => prFeed(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof prFeed>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type PrFeedQueryResult = NonNullable<Awaited<ReturnType<typeof prFeed>>>
+export type PrFeedQueryError = ErrorType<HTTPValidationError>
+
+
+export function usePrFeed<TData = Awaited<ReturnType<typeof prFeed>>, TError = ErrorType<HTTPValidationError>>(
+ params: undefined |  PrFeedParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof prFeed>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof prFeed>>,
+          TError,
+          Awaited<ReturnType<typeof prFeed>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePrFeed<TData = Awaited<ReturnType<typeof prFeed>>, TError = ErrorType<HTTPValidationError>>(
+ params?: PrFeedParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof prFeed>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof prFeed>>,
+          TError,
+          Awaited<ReturnType<typeof prFeed>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function usePrFeed<TData = Awaited<ReturnType<typeof prFeed>>, TError = ErrorType<HTTPValidationError>>(
+ params?: PrFeedParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof prFeed>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Pr Feed
+ */
+
+export function usePrFeed<TData = Awaited<ReturnType<typeof prFeed>>, TError = ErrorType<HTTPValidationError>>(
+ params?: PrFeedParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof prFeed>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getPrFeedQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getOverviewUrl = (params?: OverviewParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -7717,6 +8199,277 @@ export function useOverview<TData = Awaited<ReturnType<typeof overview>>, TError
 
 
 
+export const getListBodyWeightUrl = (params?: ListBodyWeightParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/body-weight?${stringifiedParams}` : `/api/v1/body-weight`
+}
+
+/**
+ * @summary List Body Weight
+ */
+export const listBodyWeight = async (params?: ListBodyWeightParams, options?: Parameters<typeof customFetch>[1]): Promise<BodyWeightRead[]> => {
+
+  return customFetch<BodyWeightRead[]>(getListBodyWeightUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListBodyWeightQueryKey = (params?: ListBodyWeightParams,) => {
+    return [
+    `/api/v1/body-weight`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListBodyWeightQueryOptions = <TData = Awaited<ReturnType<typeof listBodyWeight>>, TError = ErrorType<HTTPValidationError>>(params?: ListBodyWeightParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBodyWeight>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListBodyWeightQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listBodyWeight>>> = ({ signal }) => listBodyWeight(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listBodyWeight>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListBodyWeightQueryResult = NonNullable<Awaited<ReturnType<typeof listBodyWeight>>>
+export type ListBodyWeightQueryError = ErrorType<HTTPValidationError>
+
+
+export function useListBodyWeight<TData = Awaited<ReturnType<typeof listBodyWeight>>, TError = ErrorType<HTTPValidationError>>(
+ params: undefined |  ListBodyWeightParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBodyWeight>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBodyWeight>>,
+          TError,
+          Awaited<ReturnType<typeof listBodyWeight>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListBodyWeight<TData = Awaited<ReturnType<typeof listBodyWeight>>, TError = ErrorType<HTTPValidationError>>(
+ params?: ListBodyWeightParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBodyWeight>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBodyWeight>>,
+          TError,
+          Awaited<ReturnType<typeof listBodyWeight>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListBodyWeight<TData = Awaited<ReturnType<typeof listBodyWeight>>, TError = ErrorType<HTTPValidationError>>(
+ params?: ListBodyWeightParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBodyWeight>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Body Weight
+ */
+
+export function useListBodyWeight<TData = Awaited<ReturnType<typeof listBodyWeight>>, TError = ErrorType<HTTPValidationError>>(
+ params?: ListBodyWeightParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listBodyWeight>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListBodyWeightQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveBodyWeightUrl = () => {
+
+
+
+
+  return `/api/v1/body-weight`
+}
+
+/**
+ * Trägt das Körpergewicht eines Tages ein (Upsert pro Tag).
+ * @summary Save Body Weight
+ */
+export const saveBodyWeight = async (bodyWeightCreate: BodyWeightCreate, options?: Parameters<typeof customFetch>[1]): Promise<BodyWeightRead> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<BodyWeightRead>(getSaveBodyWeightUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(bodyWeightCreate)
+  }
+);}
+
+
+
+
+
+export const getSaveBodyWeightMutationKey = () => ['saveBodyWeight'] as const;
+
+export const getSaveBodyWeightMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveBodyWeight>>, TError,SaveBodyWeightMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveBodyWeight>>, TError,SaveBodyWeightMutationVariables, TContext> => {
+
+const mutationKey = getSaveBodyWeightMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveBodyWeight>>, SaveBodyWeightMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveBodyWeight(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveBodyWeightMutationResult = NonNullable<Awaited<ReturnType<typeof saveBodyWeight>>>
+    export type SaveBodyWeightMutationBody = BodyType<BodyWeightCreate>
+    export type SaveBodyWeightMutationError = ErrorType<HTTPValidationError>
+    export type SaveBodyWeightMutationVariables = {data: BodyType<BodyWeightCreate>}
+
+    /**
+ * @summary Save Body Weight
+ */
+export const useSaveBodyWeight = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveBodyWeight>>, TError,SaveBodyWeightMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof saveBodyWeight>>,
+        TError,
+        SaveBodyWeightMutationVariables,
+        TContext
+      > => {
+      return useMutation(getSaveBodyWeightMutationOptions(options), queryClient);
+    }
+
+export const getDeleteBodyWeightUrl = (entryId: number,) => {
+
+
+
+
+  return `/api/v1/body-weight/${entryId}`
+}
+
+/**
+ * @summary Delete Body Weight
+ */
+export const deleteBodyWeight = async (entryId: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteBodyWeightUrl(entryId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteBodyWeightMutationKey = () => ['deleteBodyWeight'] as const;
+
+export const getDeleteBodyWeightMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBodyWeight>>, TError,DeleteBodyWeightMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteBodyWeight>>, TError,DeleteBodyWeightMutationVariables, TContext> => {
+
+const mutationKey = getDeleteBodyWeightMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteBodyWeight>>, DeleteBodyWeightMutationVariables> = (props) => {
+          const {entryId} = props ?? {};
+
+          return  deleteBodyWeight(entryId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteBodyWeightMutationResult = NonNullable<Awaited<ReturnType<typeof deleteBodyWeight>>>
+
+    export type DeleteBodyWeightMutationError = ErrorType<HTTPValidationError>
+    export type DeleteBodyWeightMutationVariables = {entryId: number}
+
+    /**
+ * @summary Delete Body Weight
+ */
+export const useDeleteBodyWeight = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteBodyWeight>>, TError,DeleteBodyWeightMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteBodyWeight>>,
+        TError,
+        DeleteBodyWeightMutationVariables,
+        TContext
+      > => {
+      return useMutation(getDeleteBodyWeightMutationOptions(options), queryClient);
+    }
+
 export const getExportDataUrl = () => {
 
 
@@ -7818,6 +8571,91 @@ export function useExportData<TData = Awaited<ReturnType<typeof exportData>>, TE
 
 
 
+
+export const getImportHevyUrl = (params?: ImportHevyParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/account/import/hevy?${stringifiedParams}` : `/api/v1/account/import/hevy`
+}
+
+/**
+ * Importiert einen Hevy-CSV-Export; mit `dry_run` wird nur gezählt, nichts gespeichert.
+ * @summary Import Hevy
+ */
+export const importHevy = async (bodyImportHevy: BodyImportHevy,
+    params?: ImportHevyParams, options?: Parameters<typeof customFetch>[1]): Promise<ImportResult> => {
+    const formData = new FormData();
+formData.append(`file`, bodyImportHevy.file);
+
+  return customFetch<ImportResult>(getImportHevyUrl(params),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+
+export const getImportHevyMutationKey = () => ['importHevy'] as const;
+
+export const getImportHevyMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importHevy>>, TError,ImportHevyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importHevy>>, TError,ImportHevyMutationVariables, TContext> => {
+
+const mutationKey = getImportHevyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importHevy>>, ImportHevyMutationVariables> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  importHevy(data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportHevyMutationResult = NonNullable<Awaited<ReturnType<typeof importHevy>>>
+    export type ImportHevyMutationBody = BodyType<BodyImportHevy>
+    export type ImportHevyMutationError = ErrorType<HTTPValidationError>
+    export type ImportHevyMutationVariables = {data: BodyType<BodyImportHevy>;params?: ImportHevyParams}
+
+    /**
+ * @summary Import Hevy
+ */
+export const useImportHevy = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importHevy>>, TError,ImportHevyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof importHevy>>,
+        TError,
+        ImportHevyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getImportHevyMutationOptions(options), queryClient);
+    }
 
 export const getDeleteAccountUrl = () => {
 

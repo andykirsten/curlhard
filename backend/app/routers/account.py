@@ -1,12 +1,14 @@
 from datetime import date
+from typing import Annotated
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, File, Response, UploadFile
 from sqlalchemy import delete, or_, update
 from sqlmodel import SQLModel, select
 
 from app.deps import AppSettings, CurrentUser, DbSession
 from app.errors import ApiError
 from app.models import (
+    BodyWeightLog,
     Exercise,
     ExerciseNote,
     ExerciseSecondaryMuscle,
@@ -23,7 +25,9 @@ from app.models import (
     WorkoutSession,
 )
 from app.schemas.auth import AccountDelete
+from app.schemas.import_ import ImportResult
 from app.services import auth as auth_service
+from app.services import import_hevy as hevy
 
 router = APIRouter(prefix="/account", tags=["account"])
 
@@ -62,10 +66,34 @@ def export_data(user: CurrentUser, db: DbSession):
         "exercise_notes": _rows(db, ExerciseNote, user_id=uid),
         "exercise_settings": _rows(db, ExerciseSetting, user_id=uid),
         "training_cycles": _rows(db, TrainingCycle, user_id=uid),
+        "body_weight": _rows(db, BodyWeightLog, user_id=uid),
         # Avatar-Bytes bewusst nicht im Export, nur das Vorhandensein
         "has_avatar": db.exec(select(UserAvatar.id).where(UserAvatar.user_id == uid)).first()  # type: ignore[arg-type]
         is not None,
     }
+
+
+@router.post("/import/hevy", response_model=ImportResult)
+def import_hevy(
+    user: CurrentUser,
+    db: DbSession,
+    file: Annotated[UploadFile, File(...)],
+    dry_run: bool = False,
+):
+    """Importiert einen Hevy-CSV-Export; mit `dry_run` wird nur gezählt, nichts gespeichert."""
+    data = file.file.read(hevy.MAX_BYTES + 1)
+    if len(data) > hevy.MAX_BYTES:
+        raise ApiError(422, "file_too_large", "Datei ist zu groß (max. 5 MB)")
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError as e:
+        raise ApiError(422, "invalid_csv", "Die Datei ist keine UTF-8-CSV") from e
+    result = hevy.import_hevy(db, user, text)
+    if dry_run:
+        db.rollback()
+    else:
+        db.commit()
+    return {**result, "dry_run": dry_run}
 
 
 @router.post("/delete", status_code=204)
@@ -79,6 +107,7 @@ def delete_account(body: AccountDelete, user: CurrentUser, db: DbSession, settin
     db.execute(delete(SessionExercise).where(SessionExercise.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(WorkoutSession).where(WorkoutSession.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(TrainingCycle).where(TrainingCycle.user_id == uid))  # type: ignore[arg-type]
+    db.execute(delete(BodyWeightLog).where(BodyWeightLog.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(UserAvatar).where(UserAvatar.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(ExerciseNote).where(ExerciseNote.user_id == uid))  # type: ignore[arg-type]
     db.execute(delete(ExerciseSetting).where(ExerciseSetting.user_id == uid))  # type: ignore[arg-type]

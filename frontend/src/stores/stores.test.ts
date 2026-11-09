@@ -51,6 +51,12 @@ describe('settings store', () => {
     expect(localStorage.getItem('curlhard-settings')).toContain('120')
   })
 
+  it('merkt sich das Ausblenden des Deload-Hinweises', () => {
+    expect(useSettings.getState().deloadDismissedAt).toBeNull()
+    useSettings.getState().set({ deloadDismissedAt: 1234 })
+    expect(localStorage.getItem('curlhard-settings')).toContain('1234')
+  })
+
   it('resolves dark mode', () => {
     expect(isDark('dark', false)).toBe(true)
     expect(isDark('light', true)).toBe(false)

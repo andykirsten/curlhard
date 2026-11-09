@@ -333,3 +333,49 @@ def test_pr_events_use_rpe():
     events = stats.pr_events(sets, "weight", None)
     assert [e["kind"] for e in events] == ["e1rm"]
     assert events[0]["value"] == pytest.approx(80 * (1 + 10 / 30), abs=0.01)
+
+
+def typed(session, days_ago, reps, weight, set_type, set_id=0):
+    return SetData(
+        session, NOW - timedelta(days=days_ago), reps, weight, set_id=set_id, set_type=set_type
+    )
+
+
+def test_drop_und_backoff_zählen_für_volumen_nicht_für_e1rm_und_rekorde():
+    sets = [s(1, 2, 5, 100), typed(1, 2, 10, 60, "drop"), typed(1, 2, 8, 70, "backoff")]
+    m = stats.session_metrics(sets, "weight", None)
+    assert m["volume"] == 5 * 100 + 10 * 60 + 8 * 70
+    assert m["working_sets"] == 3
+    assert m["e1rm"] == pytest.approx(100 * (1 + 5 / 30), abs=0.01)  # nur der normale Satz
+    assert stats.records(sets, "weight", None)[1]["weight_kg"] == 100  # 5er-Rekord
+    assert stats.new_records([s(1, 5, 5, 100)], 5, 120, "weight", None) == [1, 5]
+    assert stats.new_records([typed(1, 5, 5, 140, "drop")], 5, 120, "weight", None) == []
+
+
+def test_pr_events_ignorieren_drop_sätze():
+    sets = [
+        s(1, 10, 5, 100),
+        typed(2, 3, 10, 90, "drop", set_id=1),
+        s(2, 3, 5, 102.5),
+    ]
+    events = stats.pr_events(sets, "weight", None)
+    assert {e["set_id"] for e in events} == {0}  # nur der normale Satz bricht Rekorde
+    assert all(e["value"] >= 100 for e in events)
+
+
+def test_nur_drop_sätze_ergeben_kein_e1rm_aber_volumen():
+    m = stats.session_metrics([typed(1, 2, 10, 60, "drop")], "weight", None)
+    assert m["e1rm"] is None and m["volume"] == 600
+
+
+def test_muscle_sets_gewichtet_primär_voll_und_nebenmuskel_halb():
+    # Zwei Sätze Brust mit Trizeps als Nebenmuskel, ein Satz Trizeps allein; vier Wochen
+    entries = [(1, [2]), (1, [2]), (2, [])]
+    assert stats.muscle_sets(entries, 4) == {1: 0.5, 2: 0.5}
+
+
+def test_muscle_sets_ohne_primärmuskel_und_doppelte_nebenmuskeln():
+    # Ohne Primärmuskel zählen nur die Nebenmuskeln; der Primärmuskel zählt nicht doppelt
+    assert stats.muscle_sets([(None, [3])], 1) == {3: 0.5}
+    assert stats.muscle_sets([(1, [1, 1, 2])], 1) == {1: 1.0, 2: 0.5}
+    assert stats.muscle_sets([], 4) == {}

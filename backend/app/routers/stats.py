@@ -3,27 +3,34 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query
 from pydantic import AwareDatetime
-from sqlmodel import select
+from sqlmodel import col, select
 
 from app.deps import CurrentUser, DbSession
 from app.models import (
     Exercise,
+    MuscleGroup,
     PlanDay,
     SessionExercise,
     SetLog,
     WorkoutSession,
     utcnow,
 )
+from app.repositories.body_weight import body_weight_at
 from app.repositories.common import get_visible_exercise
-from app.repositories.sets import load_sets
+from app.repositories.muscles import secondary_map
+from app.repositories.sets import load_all_sets, load_sets
 from app.schemas.stats import (
+    BalanceRead,
+    DeloadRead,
     HistoryRead,
     InsightsRead,
     LogRead,
     OverviewRead,
+    PrFeedRead,
     RecordsRead,
     SummaryRead,
 )
+from app.services import deload as deload_service
 from app.services import stats
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -38,6 +45,9 @@ def exercise_summary(exercise_id: int, user: CurrentUser, db: DbSession):
     result["load_type"] = ex.load_type
     result["session_count"] = len(rows)
     result["last_session"] = rows[-1] if rows else None
+    bw = user.body_weight_kg
+    if ex.load_type == "weight" and bw and result["e1rm"]:
+        result["relative_e1rm"] = round(result["e1rm"] / bw, 2)
     return result
 
 
@@ -177,6 +187,7 @@ def exercise_log(
                 "weight_kg": s.weight_kg,
                 "rpe": s.rpe,
                 "is_warmup": s.is_warmup,
+                "set_type": s.set_type,
                 "records": marks.get(s.id, []),  # type: ignore[arg-type]
             }
         )
@@ -209,6 +220,54 @@ def exercise_log(
     }
 
 
+@router.get("/deload", response_model=DeloadRead)
+def deload(user: CurrentUser, db: DbSession):
+    now = utcnow()
+    per_exercise = load_all_sets(db, user.id, now - deload_service.WINDOW)  # type: ignore[arg-type]
+    return deload_service.detect(per_exercise, user.body_weight_kg, now)
+
+
+@router.get("/balance", response_model=BalanceRead)
+def balance(user: CurrentUser, db: DbSession, weeks: Annotated[int, Query(ge=1, le=26)] = 4):
+    """Arbeitssätze je Muskelgruppe und Woche (Durchschnitt über die letzten `weeks` Wochen)."""
+    per_exercise = load_all_sets(db, user.id, utcnow() - timedelta(weeks=weeks))  # type: ignore[arg-type]
+    ids = list(per_exercise)
+    primary = dict(
+        db.exec(
+            select(Exercise.id, Exercise.primary_muscle_group_id).where(col(Exercise.id).in_(ids))
+        ).all()
+    )
+    secondary = secondary_map(db, ids)
+    entries = [
+        (primary.get(ex_id), secondary[ex_id])
+        for ex_id, (_name, _lt, sets) in per_exercise.items()
+        for s in sets
+        if not s.is_warmup and s.reps > 0
+    ]
+    per_week = stats.muscle_sets(entries, weeks)
+    groups = db.exec(select(MuscleGroup)).all()
+    rows = [
+        {"muscle_group_id": g.id, "name": g.name, "sets_per_week": per_week.get(g.id, 0.0)}
+        for g in groups
+    ]
+    rows.sort(key=lambda r: (-float(r["sets_per_week"] or 0), str(r["name"])))
+    return {"weeks": weeks, "muscle_groups": rows}
+
+
+@router.get("/prs", response_model=PrFeedRead)
+def pr_feed(user: CurrentUser, db: DbSession, limit: Annotated[int, Query(ge=1, le=100)] = 30):
+    """Rekorde über alle Übungen, neueste zuerst."""
+    items = []
+    for ex_id, (name, load_type, sets) in load_all_sets(db, user.id).items():  # type: ignore[arg-type]
+        events = stats.pr_timeline(stats.pr_events(sets, load_type, user.body_weight_kg))
+        items += [
+            {**e, "exercise_id": ex_id, "exercise_name": name, "load_type": load_type}
+            for e in events
+        ]
+    items.sort(key=lambda e: e["date"], reverse=True)
+    return {"items": items[:limit]}
+
+
 @router.get("/overview", response_model=OverviewRead)
 def overview(user: CurrentUser, db: DbSession, weeks: Annotated[int, Query(ge=1, le=104)] = 12):
     now = utcnow()
@@ -227,9 +286,12 @@ def overview(user: CurrentUser, db: DbSession, weeks: Annotated[int, Query(ge=1,
             SetLog.is_warmup == False,  # noqa: E712
         )
     ).all()
+    bw_at = body_weight_at(db, user.id)  # type: ignore[arg-type]
     entries = []
     for s, session_id, ex in rows:
-        load = stats.effective_load(ex.load_type, s.weight_kg, user.body_weight_kg)
+        load = stats.effective_load(
+            ex.load_type, s.weight_kg, bw_at(s.completed_at) or user.body_weight_kg
+        )
         volume = s.reps * load if load is not None else 0.0
         entries.append((session_id, s.completed_at, volume, ex.primary_muscle_group_id))
     return {"weeks": stats.overview(entries, weeks, now)}
