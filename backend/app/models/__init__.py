@@ -31,6 +31,16 @@ class User(Base, table=True):
     avatar_updated_at: datetime | None = None
 
 
+class BodyWeightLog(Base, table=True):
+    """Körpergewicht-Verlauf; ein Eintrag pro Tag und User."""
+
+    __tablename__ = "body_weight_log"
+    __table_args__ = (UniqueConstraint("user_id", "measured_on"),)
+    user_id: int = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
+    measured_on: date
+    weight_kg: float
+
+
 class UserAvatar(Base, table=True):
     __tablename__ = "user_avatar"
     __table_args__ = (UniqueConstraint("user_id"),)

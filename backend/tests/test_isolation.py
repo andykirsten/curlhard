@@ -22,7 +22,9 @@ def world(alice, catalog):
     cycle = alice.post(
         f"{API}/cycles", json={"name": "Alice-Zyklus", "start_date": "2026-10-01"}
     ).json()
+    body = alice.post(f"{API}/body-weight", json={"weight_kg": 80}).json()
     return {
+        "body": body["id"],
         "private": private["id"],
         "plan": plan["id"],
         "day": day["id"],
@@ -55,6 +57,7 @@ def _cases(w):
         ("post", f"/plan-days/{w['day']}/exercises", {"exercise_id": w["private"]}),
         ("patch", f"/plan-exercises/{w['pe']}", {"note": "gehackt"}),
         ("delete", f"/plan-exercises/{w['pe']}", None),
+        ("delete", f"/body-weight/{w['body']}", None),
         ("get", f"/sessions/{w['session']}", None),
         ("get", f"/sessions/{w['session']}/previous", None),
         ("patch", f"/sessions/{w['session']}", {"note": "gehackt"}),
@@ -114,6 +117,11 @@ def test_lists_never_leak(alice, bob, world):
     overview = bob.get(f"{API}/stats/overview").json()["weeks"]
     assert all(w["volume"] == 0 and w["sessions"] == 0 for w in overview)
     assert bob.get(f"{API}/stats/deload").json() == {"recommended": False, "exercises": []}
+    assert bob.get(f"{API}/body-weight").json() == []
+    assert bob.get(f"{API}/stats/prs").json() == {"items": []}
+    assert all(
+        g["sets_per_week"] == 0 for g in bob.get(f"{API}/stats/balance").json()["muscle_groups"]
+    )
 
 
 def test_user_id_in_body_is_ignored(alice, bob):
@@ -150,6 +158,10 @@ def test_all_user_endpoints_require_login(app, world):
     extra = [
         ("get", "/today", None),
         ("get", "/stats/deload", None),
+        ("get", "/stats/balance", None),
+        ("get", "/stats/prs", None),
+        ("get", "/body-weight", None),
+        ("post", "/body-weight", {"weight_kg": 80}),
         ("get", "/plans", None),
         ("get", "/cycles", None),
         ("post", "/cycles", {"name": "X", "start_date": "2026-10-01"}),

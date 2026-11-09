@@ -18,7 +18,16 @@ function Tile({ label, value, hint, gold }: { label: string; value: string; hint
 }
 
 /** Lebenszeit-Kennzahlen als große Kacheln; Zeitübungen zeigen Haltezeiten statt Tonnage. */
-export function LifetimeTiles({ lifetime, loadType }: { lifetime: InsightsRead['lifetime']; loadType: string }) {
+export function LifetimeTiles({
+  lifetime,
+  loadType,
+  relativeE1rm,
+}: {
+  lifetime: InsightsRead['lifetime']
+  loadType: string
+  /** e1RM geteilt durch das Körpergewicht, nur für Gewichtsübungen */
+  relativeE1rm?: number | null
+}) {
   const isTime = loadType === 'time'
   const heaviest = lifetime.heaviest_set
   const since = lifetime.days_since_last
@@ -56,6 +65,13 @@ export function LifetimeTiles({ lifetime, loadType }: { lifetime: InsightsRead['
               label="Bestes Session-Volumen"
               value={lifetime.best_session_volume != null ? formatTonnage(lifetime.best_session_volume) : '–'}
             />
+            {relativeE1rm != null && (
+              <Tile
+                label="e1RM / KG"
+                value={`${String(relativeE1rm).replace('.', ',')} ×`}
+                hint="Körpergewicht"
+              />
+            )}
           </>
         )}
         <Tile label="Sessions" value={formatInt(lifetime.total_sessions)} hint={`${formatInt(lifetime.total_working_sets)} Arbeitssätze`} />

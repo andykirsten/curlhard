@@ -13,6 +13,7 @@ from app.models import (
     MuscleGroup,
 )
 from app.repositories.common import get_visible_exercise
+from app.repositories.muscles import secondary_map as _secondary_map
 from app.schemas.exercises import (
     ExerciseCreate,
     ExerciseRead,
@@ -72,18 +73,6 @@ _named_routes("equipment", Equipment, "Equipment", "equipment")
 
 
 # ---- Übungen -------------------------------------------------------------------------------
-
-
-def _secondary_map(db: Session, ids: list[int]) -> dict[int, list[int]]:
-    result: dict[int, list[int]] = {i: [] for i in ids}
-    if not ids:
-        return result
-    rows = db.exec(
-        select(ExerciseSecondaryMuscle).where(col(ExerciseSecondaryMuscle.exercise_id).in_(ids))
-    ).all()
-    for row in rows:
-        result[row.exercise_id].append(row.muscle_group_id)
-    return result
 
 
 def _to_read(ex: Exercise, secondary: list[int]) -> ExerciseRead:

@@ -203,3 +203,19 @@ test('Beispielplan aus dem Startkatalog anlegen', async ({ page, request }, test
   await expect(page.getByRole('link', { name: /Beispielplan/ })).toBeVisible()
   await expect(page.getByText(/Push \(Mo\)/)).toBeVisible()
 })
+
+test('Statistik-Tab: Balance, Rekorde und Körpergewicht eintragen', async ({ page, request }, testInfo) => {
+  const email = `statistik-${testInfo.project.name}@example.com`
+  await createUser(request, email, 'statistik-secret-password')
+  await login(page, email, 'statistik-secret-password')
+  await page.getByRole('link', { name: 'Statistik', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Statistik', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Muskelgruppen-Balance' })).toBeVisible()
+  await expect(page.getByText('Noch keine Daten – trainiere ein paar Wochen.')).toBeVisible()
+  // Gewicht eintragen: erscheint groß in der Karte
+  await expect(page.getByTestId('body-weight-current')).toHaveText('–')
+  await page.getByRole('button', { name: 'Gewicht eintragen' }).click()
+  await page.getByRole('button', { name: 'Gewicht (kg) erhöhen' }).click()
+  await page.getByRole('button', { name: 'Speichern' }).click()
+  await expect(page.getByTestId('body-weight-current')).toHaveText(/\d+(,\d+)? kg/)
+})

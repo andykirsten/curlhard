@@ -38,6 +38,8 @@ class SummaryRead(BaseModel):
     change_12w_pct: float | None
     session_count: int
     last_session: SessionMetrics | None
+    #: e1RM geteilt durch das aktuelle Körpergewicht (nur Gewichtsübungen)
+    relative_e1rm: float | None = None
 
 
 class HistoryRead(BaseModel):
@@ -156,6 +158,28 @@ class PrEvent(BaseModel):
     kind: Literal["e1rm", "nrm", "reps"]
     reps: int | None
     value: float
+
+
+class PrFeedItem(PrEvent):
+    exercise_id: int
+    exercise_name: str
+    load_type: str
+
+
+class PrFeedRead(BaseModel):
+    items: list[PrFeedItem]
+
+
+class BalanceRow(BaseModel):
+    muscle_group_id: int
+    name: str
+    #: gewichtete Arbeitssätze pro Woche (Primärmuskel 1, Nebenmuskel 0,5)
+    sets_per_week: float
+
+
+class BalanceRead(BaseModel):
+    weeks: int
+    muscle_groups: list[BalanceRow]
 
 
 class RepRanges(BaseModel):

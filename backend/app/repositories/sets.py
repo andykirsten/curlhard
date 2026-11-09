@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlmodel import Session, select
 
 from app.models import Exercise, SessionExercise, SetLog
+from app.repositories.body_weight import body_weight_at
 from app.services.stats import SetData
 
 
@@ -19,6 +20,7 @@ def load_all_sets(
     )
     if since is not None:
         stmt = stmt.where(SetLog.completed_at >= since)  # type: ignore[arg-type]
+    bw_at = body_weight_at(db, user_id)
     out: dict[int, tuple[str, str, list[SetData]]] = {}
     for s, session_id, ex in db.exec(stmt).all():
         out.setdefault(ex.id, (ex.name, ex.load_type, []))[2].append(  # type: ignore[arg-type]
@@ -32,6 +34,7 @@ def load_all_sets(
                 set_id=s.id,  # type: ignore[arg-type]
                 set_number=s.set_number,
                 set_type=s.set_type,
+                body_weight_kg=bw_at(s.completed_at),
             )
         )
     return out
@@ -57,6 +60,7 @@ def load_sets(
         stmt = stmt.where(SetLog.completed_at <= end)  # type: ignore[arg-type]
     if exclude_set_id is not None:
         stmt = stmt.where(SetLog.id != exclude_set_id)
+    bw_at = body_weight_at(db, user_id)
     return [
         SetData(
             session_id=session_id,
@@ -68,6 +72,7 @@ def load_sets(
             set_id=s.id,  # type: ignore[arg-type]
             set_number=s.set_number,
             set_type=s.set_type,
+            body_weight_kg=bw_at(s.completed_at),
         )
         for s, session_id in db.exec(stmt).all()
     ]

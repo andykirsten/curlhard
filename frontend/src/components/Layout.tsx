@@ -6,7 +6,7 @@ import {
   useRouter,
   useRouterState,
 } from '@tanstack/react-router'
-import { ClipboardList, Dumbbell, History, Home } from 'lucide-react'
+import { BarChart3, ClipboardList, Dumbbell, History, Home } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useMe } from '@/api'
 import { AmbientLayer } from '@/components/AmbientLayer'
@@ -21,6 +21,7 @@ const NAV = [
   { to: '/plans', label: 'Pläne', icon: ClipboardList },
   { to: '/history', label: 'Verlauf', icon: History },
   { to: '/exercises', label: 'Übungen', icon: Dumbbell },
+  { to: '/stats', label: 'Statistik', icon: BarChart3 },
 ] as const
 
 export function BottomNav() {

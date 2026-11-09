@@ -366,3 +366,16 @@ def test_pr_events_ignorieren_drop_sätze():
 def test_nur_drop_sätze_ergeben_kein_e1rm_aber_volumen():
     m = stats.session_metrics([typed(1, 2, 10, 60, "drop")], "weight", None)
     assert m["e1rm"] is None and m["volume"] == 600
+
+
+def test_muscle_sets_gewichtet_primär_voll_und_nebenmuskel_halb():
+    # Zwei Sätze Brust mit Trizeps als Nebenmuskel, ein Satz Trizeps allein; vier Wochen
+    entries = [(1, [2]), (1, [2]), (2, [])]
+    assert stats.muscle_sets(entries, 4) == {1: 0.5, 2: 0.5}
+
+
+def test_muscle_sets_ohne_primärmuskel_und_doppelte_nebenmuskeln():
+    # Ohne Primärmuskel zählen nur die Nebenmuskeln; der Primärmuskel zählt nicht doppelt
+    assert stats.muscle_sets([(None, [3])], 1) == {3: 0.5}
+    assert stats.muscle_sets([(1, [1, 1, 2])], 1) == {1: 1.0, 2: 0.5}
+    assert stats.muscle_sets([], 4) == {}

@@ -30,6 +30,8 @@ class SetData:
     set_id: int = 0
     set_number: int = 0
     set_type: str = "normal"
+    #: Körpergewicht am Tag des Satzes; None = Wert des Aufrufers verwenden
+    body_weight_kg: float | None = None
 
 
 def effective_load(load_type: str, weight_kg: float, body_weight_kg: float | None) -> float | None:
@@ -41,6 +43,11 @@ def effective_load(load_type: str, weight_kg: float, body_weight_kg: float | Non
     if load_type == "assisted":
         return max(bw - weight_kg, 0.0)
     return None  # time
+
+
+def _load(load_type: str, s: SetData, fallback_bw: float | None) -> float | None:
+    bw = s.body_weight_kg if s.body_weight_kg is not None else fallback_bw
+    return effective_load(load_type, s.weight_kg, bw)
 
 
 def _mayhew(reps: float) -> float:
@@ -125,7 +132,7 @@ def session_metrics(
     best_load = 0.0
     top_load_set: tuple[float, SetData] | None = None
     for s in working:
-        load = effective_load(load_type, s.weight_kg, body_weight_kg) or 0.0
+        load = _load(load_type, s, body_weight_kg) or 0.0
         volume += s.reps * load
         if top_load_set is None or (load, s.reps) > (top_load_set[0], top_load_set[1].reps):
             top_load_set = (load, s)
@@ -164,7 +171,7 @@ def records(sets: list[SetData], load_type: str, body_weight_kg: float | None) -
         for s in working:
             if s.reps < n:
                 continue
-            load = effective_load(load_type, s.weight_kg, body_weight_kg)
+            load = _load(load_type, s, body_weight_kg)
             if load is None:
                 continue
             # bei Gleichstand zählt der frühere Satz (zuerst erreicht)
@@ -194,11 +201,7 @@ def new_records(
         if reps < n:
             continue
         prev_best = max(
-            (
-                effective_load(load_type, p.weight_kg, bw) or 0.0
-                for p in prev_working
-                if p.reps >= n
-            ),
+            (_load(load_type, p, bw) or 0.0 for p in prev_working if p.reps >= n),
             default=None,
         )
         if prev_best is not None and load > prev_best:
@@ -230,6 +233,24 @@ def summary(rows: list[dict], now: datetime) -> dict:
         "change_4w_pct": pct(current, ref4),
         "change_12w_pct": pct(current, ref12),
     }
+
+
+SECONDARY_WEIGHT = 0.5  # ein Satz zählt für Nebenmuskeln halb
+
+
+def muscle_sets(entries: list[tuple[int | None, list[int]]], weeks: int) -> dict[int, float]:
+    """Gewichtete Sätze je Muskelgruppe und Woche.
+
+    entries: je Arbeitssatz (Primärmuskel, Nebenmuskeln). Primär zählt 1, jeder Nebenmuskel
+    SECONDARY_WEIGHT.
+    """
+    totals: dict[int, float] = defaultdict(float)
+    for primary, secondary in entries:
+        if primary is not None:
+            totals[primary] += 1
+        for m in set(secondary) - {primary}:
+            totals[m] += SECONDARY_WEIGHT
+    return {m: round(v / weeks, 1) for m, v in totals.items()}
 
 
 def week_start(d: datetime | date) -> date:
@@ -284,7 +305,7 @@ def rep_profile(
         for s in working:
             if s.reps < n:
                 continue
-            load = effective_load(load_type, s.weight_kg, bw)
+            load = _load(load_type, s, bw)
             if load is None or load <= 0:
                 continue
             if best is None or load > best[0] or (load == best[0] and s.date < best[1].date):
@@ -315,7 +336,7 @@ def pr_events(sets: list[SetData], load_type: str, bw: float | None) -> list[dic
     best_reps = 0
     events: list[dict] = []
     for s in working:
-        load = effective_load(load_type, s.weight_kg, bw)
+        load = _load(load_type, s, bw)
         found: list[dict] = []
         if load is not None and load > 0:
             est = e1rm(load, s.reps, s.rpe)
@@ -397,7 +418,7 @@ def lifetime(
     working = _working(sets)
     heaviest: tuple[float, SetData] | None = None
     for s in _ranked(sets):
-        load = effective_load(load_type, s.weight_kg, bw)
+        load = _load(load_type, s, bw)
         if load is None:
             continue
         if heaviest is None or (load, s.reps) > (heaviest[0], heaviest[1].reps):

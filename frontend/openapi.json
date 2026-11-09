@@ -3365,6 +3365,98 @@
         }
       }
     },
+    "/api/v1/stats/balance": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Balance",
+        "description": "Arbeitssätze je Muskelgruppe und Woche (Durchschnitt über die letzten `weeks` Wochen).",
+        "operationId": "balance",
+        "parameters": [
+          {
+            "name": "weeks",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 26,
+              "minimum": 1,
+              "default": 4,
+              "title": "Weeks"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BalanceRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats/prs": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Pr Feed",
+        "description": "Rekorde über alle Übungen, neueste zuerst.",
+        "operationId": "pr_feed",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrFeedRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/stats/overview": {
       "get": {
         "tags": [
@@ -3396,6 +3488,152 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/body-weight": {
+      "get": {
+        "tags": [
+          "body-weight"
+        ],
+        "summary": "List Body Weight",
+        "operationId": "list_body_weight",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BodyWeightRead"
+                  },
+                  "title": "Response List Body Weight"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "body-weight"
+        ],
+        "summary": "Save Body Weight",
+        "description": "Trägt das Körpergewicht eines Tages ein (Upsert pro Tag).",
+        "operationId": "save_body_weight",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BodyWeightCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BodyWeightRead"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/body-weight/{entry_id}": {
+      "delete": {
+        "tags": [
+          "body-weight"
+        ],
+        "summary": "Delete Body Weight",
+        "operationId": "delete_body_weight",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -3587,6 +3825,50 @@
         ],
         "title": "AuthorRead"
       },
+      "BalanceRead": {
+        "properties": {
+          "weeks": {
+            "type": "integer",
+            "title": "Weeks"
+          },
+          "muscle_groups": {
+            "items": {
+              "$ref": "#/components/schemas/BalanceRow"
+            },
+            "type": "array",
+            "title": "Muscle Groups"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weeks",
+          "muscle_groups"
+        ],
+        "title": "BalanceRead"
+      },
+      "BalanceRow": {
+        "properties": {
+          "muscle_group_id": {
+            "type": "integer",
+            "title": "Muscle Group Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sets_per_week": {
+            "type": "number",
+            "title": "Sets Per Week"
+          }
+        },
+        "type": "object",
+        "required": [
+          "muscle_group_id",
+          "name",
+          "sets_per_week"
+        ],
+        "title": "BalanceRow"
+      },
       "BestSet": {
         "properties": {
           "reps": {
@@ -3604,6 +3886,57 @@
           "weight_kg"
         ],
         "title": "BestSet"
+      },
+      "BodyWeightCreate": {
+        "properties": {
+          "measured_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measured On"
+          },
+          "weight_kg": {
+            "type": "number",
+            "maximum": 700.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Weight Kg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "weight_kg"
+        ],
+        "title": "BodyWeightCreate"
+      },
+      "BodyWeightRead": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "measured_on": {
+            "type": "string",
+            "format": "date",
+            "title": "Measured On"
+          },
+          "weight_kg": {
+            "type": "number",
+            "title": "Weight Kg"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "measured_on",
+          "weight_kg"
+        ],
+        "title": "BodyWeightRead"
       },
       "Body_upload_avatar": {
         "properties": {
@@ -5578,6 +5911,83 @@
         ],
         "title": "PrEvent"
       },
+      "PrFeedItem": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Date"
+          },
+          "session_id": {
+            "type": "integer",
+            "title": "Session Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "e1rm",
+              "nrm",
+              "reps"
+            ],
+            "title": "Kind"
+          },
+          "reps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reps"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "exercise_id": {
+            "type": "integer",
+            "title": "Exercise Id"
+          },
+          "exercise_name": {
+            "type": "string",
+            "title": "Exercise Name"
+          },
+          "load_type": {
+            "type": "string",
+            "title": "Load Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "session_id",
+          "kind",
+          "reps",
+          "value",
+          "exercise_id",
+          "exercise_name",
+          "load_type"
+        ],
+        "title": "PrFeedItem"
+      },
+      "PrFeedRead": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PrFeedItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "PrFeedRead"
+      },
       "PrMark": {
         "properties": {
           "kind": {
@@ -6849,6 +7259,17 @@
                 "type": "null"
               }
             ]
+          },
+          "relative_e1rm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative E1Rm"
           }
         },
         "type": "object",
