@@ -69,6 +69,17 @@ class OverviewRead(BaseModel):
     weeks: list[WeekOverview]
 
 
+class DeloadExercise(BaseModel):
+    exercise_id: int
+    name: str
+    reason: Literal["e1rm_falling", "rpe_rising"]
+
+
+class DeloadRead(BaseModel):
+    recommended: bool
+    exercises: list[DeloadExercise]
+
+
 class LastSet(BaseModel):
     reps: int
     weight_kg: float

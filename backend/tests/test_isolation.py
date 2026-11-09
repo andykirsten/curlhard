@@ -113,6 +113,7 @@ def test_lists_never_leak(alice, bob, world):
     assert bob.get(f"{API}/public-plans").json() == []
     overview = bob.get(f"{API}/stats/overview").json()["weeks"]
     assert all(w["volume"] == 0 and w["sessions"] == 0 for w in overview)
+    assert bob.get(f"{API}/stats/deload").json() == {"recommended": False, "exercises": []}
 
 
 def test_user_id_in_body_is_ignored(alice, bob):
@@ -148,6 +149,7 @@ def test_all_user_endpoints_require_login(app, world):
     anon = TestClient(app, base_url="http://testserver")
     extra = [
         ("get", "/today", None),
+        ("get", "/stats/deload", None),
         ("get", "/plans", None),
         ("get", "/cycles", None),
         ("post", "/cycles", {"name": "X", "start_date": "2026-10-01"}),

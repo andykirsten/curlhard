@@ -135,6 +135,25 @@ export interface DayRef {
   weekdays: number[];
 }
 
+export type DeloadExerciseReason = typeof DeloadExerciseReason[keyof typeof DeloadExerciseReason];
+
+
+export const DeloadExerciseReason = {
+  e1rm_falling: 'e1rm_falling',
+  rpe_rising: 'rpe_rising',
+} as const;
+
+export interface DeloadExercise {
+  exercise_id: number;
+  name: string;
+  reason: DeloadExerciseReason;
+}
+
+export interface DeloadRead {
+  recommended: boolean;
+  exercises: DeloadExercise[];
+}
+
 export type ExerciseCreateLoadType = typeof ExerciseCreateLoadType[keyof typeof ExerciseCreateLoadType];
 
 
@@ -7597,6 +7616,107 @@ export function useExerciseLog<TData = Awaited<ReturnType<typeof exerciseLog>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getExerciseLogQueryOptions(exerciseId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDeloadUrl = () => {
+
+
+
+
+  return `/api/v1/stats/deload`
+}
+
+/**
+ * @summary Deload
+ */
+export const deload = async ( options?: Parameters<typeof customFetch>[1]): Promise<DeloadRead> => {
+
+  return customFetch<DeloadRead>(getDeloadUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeloadQueryKey = () => {
+    return [
+    `/api/v1/stats/deload`
+    ] as const;
+    }
+
+
+export const getDeloadQueryOptions = <TData = Awaited<ReturnType<typeof deload>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDeloadQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof deload>>> = ({ signal }) => deload({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type DeloadQueryResult = NonNullable<Awaited<ReturnType<typeof deload>>>
+export type DeloadQueryError = ErrorType<unknown>
+
+
+export function useDeload<TData = Awaited<ReturnType<typeof deload>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof deload>>,
+          TError,
+          Awaited<ReturnType<typeof deload>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDeload<TData = Awaited<ReturnType<typeof deload>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof deload>>,
+          TError,
+          Awaited<ReturnType<typeof deload>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useDeload<TData = Awaited<ReturnType<typeof deload>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Deload
+ */
+
+export function useDeload<TData = Awaited<ReturnType<typeof deload>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof deload>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getDeloadQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

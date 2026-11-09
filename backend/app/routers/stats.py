@@ -15,8 +15,9 @@ from app.models import (
     utcnow,
 )
 from app.repositories.common import get_visible_exercise
-from app.repositories.sets import load_sets
+from app.repositories.sets import load_all_sets, load_sets
 from app.schemas.stats import (
+    DeloadRead,
     HistoryRead,
     InsightsRead,
     LogRead,
@@ -24,6 +25,7 @@ from app.schemas.stats import (
     RecordsRead,
     SummaryRead,
 )
+from app.services import deload as deload_service
 from app.services import stats
 
 router = APIRouter(prefix="/stats", tags=["stats"])
@@ -207,6 +209,13 @@ def exercise_log(
         "items": items,
         "next_before": page[-1][0].started_at if has_more else None,
     }
+
+
+@router.get("/deload", response_model=DeloadRead)
+def deload(user: CurrentUser, db: DbSession):
+    now = utcnow()
+    per_exercise = load_all_sets(db, user.id, now - deload_service.WINDOW)  # type: ignore[arg-type]
+    return deload_service.detect(per_exercise, user.body_weight_kg, now)
 
 
 @router.get("/overview", response_model=OverviewRead)

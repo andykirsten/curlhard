@@ -3344,6 +3344,27 @@
         }
       }
     },
+    "/api/v1/stats/deload": {
+      "get": {
+        "tags": [
+          "stats"
+        ],
+        "summary": "Deload",
+        "operationId": "deload",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeloadRead"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/stats/overview": {
       "get": {
         "tags": [
@@ -3895,6 +3916,54 @@
           "weekdays"
         ],
         "title": "DayRef"
+      },
+      "DeloadExercise": {
+        "properties": {
+          "exercise_id": {
+            "type": "integer",
+            "title": "Exercise Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "e1rm_falling",
+              "rpe_rising"
+            ],
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exercise_id",
+          "name",
+          "reason"
+        ],
+        "title": "DeloadExercise"
+      },
+      "DeloadRead": {
+        "properties": {
+          "recommended": {
+            "type": "boolean",
+            "title": "Recommended"
+          },
+          "exercises": {
+            "items": {
+              "$ref": "#/components/schemas/DeloadExercise"
+            },
+            "type": "array",
+            "title": "Exercises"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recommended",
+          "exercises"
+        ],
+        "title": "DeloadRead"
       },
       "ExerciseCreate": {
         "properties": {
