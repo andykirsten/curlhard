@@ -37,7 +37,7 @@ from app.schemas.sessions import (
 )
 from app.schemas.stats import CycleRef, LastSet, TodayRead
 from app.services import cycles as cycle_service
-from app.services import stats
+from app.services import progression, stats
 from app.services.previous import PreviousSets, last_sets_for
 
 router = APIRouter(tags=["sessions"])
@@ -134,6 +134,12 @@ def today(user: CurrentUser, db: DbSession, weekday: int | None = None):
                     "note": pe.note,
                     "permanent_note": note.note if note else "",
                     "last_sets": last,
+                    "suggestion": progression.suggest(
+                        last,
+                        pe.target_reps_min,
+                        pe.target_reps_max,
+                        ex.load_type if ex else "weight",
+                    ),
                 }
             )
         return {"id": d.id, "name": d.name, "weekdays": d.weekdays, "exercises": exercises}
@@ -294,15 +300,22 @@ def get_session_previous(session_id: int, user: CurrentUser, db: DbSession):
             plan_day_id=ws.plan_day_id,
         )
         pe = targets.get(exercise_id)
+        last = _last_set_dicts(prev)
+        ex = db.get(Exercise, exercise_id)
         out.append(
             PreviousExercise(
                 exercise_id=exercise_id,
                 target_sets=pe.target_sets if pe else None,
                 target_rest_sec=pe.target_rest_sec if pe else None,
+                suggestion=progression.suggest(
+                    last, pe.target_reps_min, pe.target_reps_max, ex.load_type if ex else "weight"
+                )
+                if pe
+                else None,
                 source_session_id=prev.session_id,
                 source_started_at=prev.started_at,
                 same_plan_day=prev.same_plan_day,
-                sets=[LastSet(**s) for s in _last_set_dicts(prev)],
+                sets=[LastSet(**s) for s in last],
             )
         )
     return SessionPrevious(

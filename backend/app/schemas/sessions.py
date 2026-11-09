@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
-from app.schemas.stats import LastSet
+from app.schemas.stats import LastSet, Suggestion
 
 
 class SessionCreate(BaseModel):
@@ -90,6 +90,8 @@ class PreviousExercise(BaseModel):
     #: Ziele aus dem Plantag der Session; None ohne Plantag oder für außerplanmäßige Übungen
     target_sets: int | None = None
     target_rest_sec: int | None = None
+    #: Vorschlag nur mit Plan-Übung (der Wiederholungsbereich fehlt sonst)
+    suggestion: Suggestion | None = None
     source_session_id: int | None = None
     source_started_at: datetime | None = None
     #: False = Rückgriff auf eine beliebige Session (kein früheres Training dieses Plantags)

@@ -4,7 +4,7 @@ export function roundToStep(value: number, step: number): number {
 
 export function stepWeight(current: number, direction: 1 | -1, step: number): number {
   const next = roundToStep(current + direction * step, step)
-  return next < 0 ? 0 : next
+  return next <= 0 ? 0 : next // <= fängt auch -0 ab
 }
 
 export function formatWeight(kg: number): string {

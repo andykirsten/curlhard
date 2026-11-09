@@ -53,7 +53,8 @@ function lastLabel(ex: TodayExercise): string | null {
   const work = ex.last_sets.filter((s) => !s.is_warmup)
   if (work.length === 0) return null
   const top = work[work.length - 1]!
-  return `Zuletzt ${work.length}× ${top.reps} @ ${formatWeight(top.weight_kg)} kg`
+  const up = ex.suggestion?.kind === 'increase' ? ' ↑' : ''
+  return `Zuletzt ${work.length}× ${top.reps} @ ${formatWeight(top.weight_kg)} kg${up}`
 }
 
 /** Titel des gewählten Tages: „Ganzkörper B“ mit Buchstaben in Akzentfarbe, sonst „Ruhetag“. */

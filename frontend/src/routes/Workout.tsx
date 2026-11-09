@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from '@tanstack/react-router'
-import { Check, Flame, MoreHorizontal, Plus } from 'lucide-react'
+import { Check, Flame, MoreHorizontal, Plus, TrendingUp } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -30,6 +30,7 @@ import {
   type SessionExerciseRead,
   type SessionRead,
   type SetRead,
+  type Suggestion,
 } from '@/api'
 import { ExercisePicker } from '@/components/ExercisePicker'
 import { EmptyState, PageHeader, Spinner } from '@/components/Layout'
@@ -50,7 +51,7 @@ import { errorMessage } from '@/lib/query'
 import { useBarWeight } from '@/lib/useBarWeight'
 import { warmupSets } from '@/lib/warmup'
 import { formatWeight } from '@/lib/weight'
-import { compareLabel, e1rm, exerciseProgress, exerciseVolume } from '@/lib/workout'
+import { compareLabel, e1rm, exerciseProgress, exerciseVolume, proposalFor } from '@/lib/workout'
 import { useActiveSession } from '@/stores/activeSession'
 import { useSettings } from '@/stores/settings'
 
@@ -178,6 +179,7 @@ function ExerciseFocus({
   restSec,
   prevSets,
   prevLabel,
+  suggestion,
   recordsBySet,
   onRecords,
   onRecordMoment,
@@ -196,6 +198,8 @@ function ExerciseFocus({
   prevSets: LastSet[]
   /** Herkunft der Vergleichswerte, z. B. „Letztes Mal: Tag 2 · Mo, 05.10.“ */
   prevLabel: string
+  /** Progressions-Vorschlag des Backends (nur mit Plan-Übung und Historie) */
+  suggestion: Suggestion | null
   recordsBySet: Record<number, number[]>
   onRecords: (setId: number, records: number[]) => void
   onRecordMoment: (moment: RecordMomentData) => void
@@ -234,9 +238,17 @@ function ExerciseFocus({
   const lastSet = working.at(-1)
   const fallback = summary.data?.last_session?.best_set
   const source = prevSets[working.length] ?? lastSet
-  const prefill = source
-    ? { reps: source.reps, weight: source.weight_kg }
-    : { reps: fallback?.reps ?? 8, weight: fallback?.weight_kg ?? 20 }
+  // Vorschlag nur für den ersten Arbeitssatz; Tap auf den Chip stellt die alten Werte wieder her
+  const [declined, setDeclined] = useState(false)
+  const proposal =
+    suggestion && !finished && working.length === 0 && !declined
+      ? proposalFor(suggestion, loadType, weightStep)
+      : null
+  const prefill = proposal
+    ? { reps: proposal.reps, weight: proposal.weight }
+    : source
+      ? { reps: source.reps, weight: source.weight_kg }
+      : { reps: fallback?.reps ?? 8, weight: fallback?.weight_kg ?? 20 }
 
   // Aufwärmen: nur vor dem ersten Arbeitssatz; danach wird das Zielgewicht vorbelegt
   const canWarmup = loadType === 'weight' && !finished && working.length === 0
@@ -451,6 +463,31 @@ function ExerciseFocus({
         >
           {prevLabel}
         </p>
+        {proposal && (
+          <button
+            type="button"
+            data-testid="suggestion"
+            aria-label={`Vorschlag ${proposal.reps} mal ${formatWeight(proposal.weight)} Kilogramm. ${proposal.reason}. Tippen für die Werte vom letzten Mal`}
+            className="mb-2 flex min-h-[44px] w-full items-center gap-2 rounded-lg border border-primary px-3 text-left"
+            onClick={() => {
+              const last = prevSets[0]
+              if (last) {
+                setWeight(last.weight_kg)
+                setReps(last.reps)
+              }
+              setWarmupTarget(null)
+              setDeclined(true)
+            }}
+          >
+            <TrendingUp className="h-4 w-4 shrink-0 text-primary" aria-hidden />
+            <span className="min-w-0">
+              <span className="block text-[11px] font-bold uppercase tracking-[0.12em] text-primary">
+                Vorschlag: {formatWeight(proposal.weight)} kg × {proposal.reps}
+              </span>
+              <span className="block truncate text-sm text-muted-foreground">{proposal.reason}</span>
+            </span>
+          </button>
+        )}
         {warmupPlan.length > 0 && !warmupHidden && (
           <div className="mb-2 flex flex-wrap items-center gap-1.5" data-testid="warmup-plan">
             <span className="mr-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
@@ -875,6 +912,7 @@ export function WorkoutPage() {
             exercise={byId.get(se.exercise_id)}
             restSec={plan?.target_rest_sec ?? defaultRest}
             prevSets={plan?.sets.filter((x) => !x.is_warmup) ?? []}
+            suggestion={plan?.suggestion ?? null}
             prevLabel={
               previous.isPending ? ' ' : compareLabel(plan, previous.data?.plan_day_name)
             }
