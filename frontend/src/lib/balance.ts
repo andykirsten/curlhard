@@ -1,28 +1,15 @@
-/** Zielbereich für Arbeitssätze pro Muskelgruppe und Woche (gängige Hypertrophie-Empfehlung). */
-export const TARGET_MIN = 10
-export const TARGET_MAX = 20
-
-export type BalanceStatus = 'low' | 'ok' | 'high'
-
-export const STATUS_LABEL: Record<BalanceStatus, string> = {
-  low: `unter ${TARGET_MIN}`,
-  ok: 'im Bereich',
-  high: `über ${TARGET_MAX}`,
+/**
+ * Der Sollwert ist relativ: Die am meisten trainierte Muskelgruppe (höchste Wochensatzzahl)
+ * ist 100 %, alle anderen werden dazu ins Verhältnis gesetzt.
+ */
+export function referenceSets(values: number[]): number {
+  return Math.max(0, ...values)
 }
 
-export function balanceStatus(setsPerWeek: number): BalanceStatus {
-  if (setsPerWeek < TARGET_MIN) return 'low'
-  return setsPerWeek > TARGET_MAX ? 'high' : 'ok'
-}
-
-/** Skalenende der Balken: mindestens knapp über dem Zielbereich, sonst der größte Wert. */
-export function scaleMax(values: number[]): number {
-  return Math.max(TARGET_MAX + 5, ...values)
-}
-
-/** Balkenbreite in Prozent (0–100). */
-export function barPercent(value: number, max: number): number {
-  return Math.min(100, Math.max(0, (value / max) * 100))
+/** Anteil am Referenzwert in ganzen Prozent (0–100). */
+export function balancePercent(value: number, reference: number): number {
+  if (reference <= 0) return 0
+  return Math.min(100, Math.max(0, Math.round((value / reference) * 100)))
 }
 
 export function formatSets(value: number): string {
