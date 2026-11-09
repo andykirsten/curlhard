@@ -31,6 +31,7 @@ def load_all_sets(
                 rpe=s.rpe,
                 set_id=s.id,  # type: ignore[arg-type]
                 set_number=s.set_number,
+                set_type=s.set_type,
             )
         )
     return out
@@ -66,6 +67,7 @@ def load_sets(
             rpe=s.rpe,
             set_id=s.id,  # type: ignore[arg-type]
             set_number=s.set_number,
+            set_type=s.set_type,
         )
         for s, session_id in db.exec(stmt).all()
     ]

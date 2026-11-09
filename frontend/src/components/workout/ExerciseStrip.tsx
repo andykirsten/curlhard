@@ -4,6 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Minus, Plus } from 'lucide-react'
 import { useEffect, useRef, type KeyboardEvent, type PointerEvent } from 'react'
 import { reorderIds } from '@/lib/reorder'
+import type { GroupInfo } from '@/lib/superset'
 import { useSortSensors } from '@/lib/useSortSensors'
 import type { ExerciseProgress } from '@/lib/workout'
 import { cn } from '@/lib/utils'
@@ -21,6 +22,8 @@ export interface ExerciseStripItem {
   id: number
   name: string
   progress: ExerciseProgress
+  /** Supersatz, zu dem die Übung gehört */
+  group?: GroupInfo | null
 }
 
 interface ExerciseStripProps {
@@ -51,7 +54,15 @@ function TileBody({ item, index }: { item: ExerciseStripItem; index: number }) {
   const { status } = item.progress
   return (
     <>
-      <span className="font-display text-[15px] leading-none">{index + 1}</span>
+      <span className="font-display text-[15px] leading-none">
+        {index + 1}
+        {item.group && (
+          <span className="ml-1 font-sans text-[10px] font-bold text-primary">
+            {item.group.letter}
+            {item.group.pos}
+          </span>
+        )}
+      </span>
       <span className="w-full truncate text-center text-[10px] font-bold uppercase leading-none tracking-[0.06em]">
         {item.name}
       </span>
@@ -243,7 +254,7 @@ export function ExerciseStrip({
               role="tab"
               aria-selected={isSelected}
               tabIndex={isSelected ? 0 : -1}
-              aria-label={`Übung ${i + 1}: ${item.name}, ${progressLabel(item.progress)}`}
+              aria-label={`Übung ${i + 1}: ${item.name}${item.group ? `, Supersatz ${item.group.letter}${item.group.pos}` : ''}, ${progressLabel(item.progress)}`}
               onClick={() => onSelect(i)}
               onPointerDown={startPress}
               onPointerMove={movePress}

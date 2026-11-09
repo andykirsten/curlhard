@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { LastSet, SetRead } from '@/api'
 import { Badge } from '@/components/ui/card'
+import { kindMark, kindOf, SET_KINDS } from '@/lib/setKind'
 import { deltaLabel } from '@/lib/workout'
 import { formatWeight } from '@/lib/weight'
 
@@ -9,6 +10,7 @@ export interface ActiveRow {
   reps: number
   weight_kg: number
   is_warmup: boolean
+  set_type?: string
   prev: LastSet | undefined
 }
 
@@ -54,11 +56,12 @@ export function SetTable({
 
   let working = 0
   const rows = sets.map((s) => {
-    const number = s.is_warmup ? null : ++working
-    return { s, number, prev: s.is_warmup ? undefined : prevSets[(number ?? 1) - 1] }
+    // Aufwärm-, Drop- und Backoff-Sätze zählen nicht als Arbeitssatz-Nummer und haben keinen Vergleich
+    const number = kindMark(s) ? null : ++working
+    return { s, number, prev: number == null ? undefined : prevSets[number - 1] }
   })
   // Geisterzeilen: noch ausstehende Sätze vom letzten Mal (nur in laufender Session)
-  const nextNumber = working + (active && !active.is_warmup ? 1 : 0)
+  const nextNumber = working + (active && !kindMark(active) ? 1 : 0)
   const ghosts = active
     ? prevSets.slice(nextNumber).map((prev, i) => ({ prev, number: nextNumber + i + 1 }))
     : []
@@ -88,12 +91,12 @@ export function SetTable({
               <li key={s.id} data-testid="set-row" className="border-t">
                 <button
                   type="button"
-                  aria-label={`Satz ${number ?? 'Aufwärmen'} bearbeiten`}
+                  aria-label={`Satz ${number ?? SET_KINDS.find((k) => k.value === kindOf(s))!.name} bearbeiten`}
                   className={`${grid} w-full py-[7px] text-left`}
                   onClick={() => onSelect(s)}
                 >
                   <span className="font-display text-lg text-muted-foreground">
-                    {number ?? 'W'}
+                    {number ?? kindMark(s)}
                   </span>
                   <span className="text-base font-medium tabular-nums text-muted-foreground">
                     {prev ? valueLabel(prev.reps, prev.weight_kg, loadType) : '–'}
@@ -139,7 +142,7 @@ export function SetTable({
                 className={`${grid} rounded-[10px] border-2 border-dashed border-primary py-[5px] pl-1.5 pr-1.5`}
               >
                 <span className="font-display text-lg text-primary">
-                  {active.is_warmup ? 'W' : active.number}
+                  {kindMark(active) ?? active.number}
                 </span>
                 <span className="text-base font-medium tabular-nums text-muted-foreground">
                   {active.prev

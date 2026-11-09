@@ -1,8 +1,11 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from app.schemas.stats import LastSet, Suggestion
+
+SetType = Literal["normal", "drop", "backoff"]
 
 
 class SessionCreate(BaseModel):
@@ -32,6 +35,7 @@ class SetCreate(BaseModel):
     rest_sec: int | None = Field(default=None, ge=0, le=7200)
     rpe: float | None = Field(default=None, ge=1, le=10)
     is_warmup: bool = False
+    set_type: SetType = "normal"
     completed_at: AwareDatetime | None = None
 
 
@@ -42,6 +46,7 @@ class SetUpdate(BaseModel):
     rest_sec: int | None = Field(default=None, ge=0, le=7200)
     rpe: float | None = Field(default=None, ge=1, le=10)
     is_warmup: bool | None = None
+    set_type: SetType | None = None
     completed_at: AwareDatetime | None = None
 
 
@@ -56,6 +61,7 @@ class SetRead(BaseModel):
     rest_sec: int | None
     rpe: float | None
     is_warmup: bool
+    set_type: SetType
     completed_at: datetime
     records: list[int] = []
 
@@ -67,6 +73,7 @@ class SessionExerciseRead(BaseModel):
     exercise_id: int
     position: int
     note: str
+    group_no: int | None
     sets: list[SetRead] = []
 
 

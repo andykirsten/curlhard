@@ -179,6 +179,7 @@ def exercise_log(
                 "weight_kg": s.weight_kg,
                 "rpe": s.rpe,
                 "is_warmup": s.is_warmup,
+                "set_type": s.set_type,
                 "records": marks.get(s.id, []),  # type: ignore[arg-type]
             }
         )

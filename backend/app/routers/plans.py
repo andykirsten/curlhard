@@ -240,6 +240,7 @@ def apply_session_to_plan(session_id: int, user: CurrentUser, db: DbSession):
         else:
             unused.remove(pe)
         pe.position = pos
+        pe.group_no = se.group_no
         db.add(pe)
     for pe in unused:
         db.delete(pe)
@@ -271,6 +272,8 @@ def add_plan_exercise(day_id: int, body: PlanExerciseCreate, user: CurrentUser, 
 def update_plan_exercise(pe_id: int, body: PlanExerciseUpdate, user: CurrentUser, db: DbSession):
     pe = get_owned(db, PlanExercise, pe_id, user.id, "Plan-Übung")  # type: ignore[arg-type]
     data = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    if "group_no" in body.model_fields_set:
+        data["group_no"] = body.group_no  # explizit null löst die Gruppe
     if "exercise_id" in data:
         get_visible_exercise(db, data["exercise_id"], user.id)  # type: ignore[arg-type]
     _check_reps(

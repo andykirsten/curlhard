@@ -343,12 +343,31 @@ export interface InviteRead {
   created_at: string;
 }
 
+export type LastSetSetType = typeof LastSetSetType[keyof typeof LastSetSetType];
+
+
+export const LastSetSetType = {
+  normal: 'normal',
+  drop: 'drop',
+  backoff: 'backoff',
+} as const;
+
 export interface LastSet {
   reps: number;
   weight_kg: number;
   is_warmup: boolean;
+  set_type?: LastSetSetType;
   rpe: number | null;
 }
+
+export type LogSetSetType = typeof LogSetSetType[keyof typeof LogSetSetType];
+
+
+export const LogSetSetType = {
+  normal: 'normal',
+  drop: 'drop',
+  backoff: 'backoff',
+} as const;
 
 export type PrMarkKind = typeof PrMarkKind[keyof typeof PrMarkKind];
 
@@ -370,6 +389,7 @@ export interface LogSet {
   weight_kg: number;
   rpe: number | null;
   is_warmup: boolean;
+  set_type?: LogSetSetType;
   records: PrMark[];
 }
 
@@ -495,6 +515,7 @@ export interface PlanExerciseRead {
   target_reps_max: number;
   target_rest_sec: number;
   note: string;
+  group_no?: number | null;
 }
 
 export interface PlanDayRead {
@@ -534,6 +555,7 @@ export interface PlanExerciseCreate {
      */
   target_rest_sec?: number;
   note?: string;
+  group_no?: number | null;
 }
 
 export interface PlanExerciseUpdate {
@@ -543,6 +565,7 @@ export interface PlanExerciseUpdate {
   target_reps_max?: number | null;
   target_rest_sec?: number | null;
   note?: string | null;
+  group_no?: number | null;
 }
 
 export interface PlanRead {
@@ -662,6 +685,15 @@ export interface SessionExerciseCreate {
   exercise_id: number;
 }
 
+export type SetReadSetType = typeof SetReadSetType[keyof typeof SetReadSetType];
+
+
+export const SetReadSetType = {
+  normal: 'normal',
+  drop: 'drop',
+  backoff: 'backoff',
+} as const;
+
 export interface SetRead {
   id: number;
   session_exercise_id: number;
@@ -672,6 +704,7 @@ export interface SetRead {
   rest_sec: number | null;
   rpe: number | null;
   is_warmup: boolean;
+  set_type: SetReadSetType;
   completed_at: string;
   records: number[];
 }
@@ -682,6 +715,7 @@ export interface SessionExerciseRead {
   exercise_id: number;
   position: number;
   note: string;
+  group_no: number | null;
   sets: SetRead[];
 }
 
@@ -725,6 +759,15 @@ export interface SessionUpdate {
   finished_at?: string | null;
 }
 
+export type SetCreateSetType = typeof SetCreateSetType[keyof typeof SetCreateSetType];
+
+
+export const SetCreateSetType = {
+  normal: 'normal',
+  drop: 'drop',
+  backoff: 'backoff',
+} as const;
+
 export interface SetCreate {
   /**
      * @minimum 0
@@ -740,8 +783,18 @@ export interface SetCreate {
   rest_sec?: number | null;
   rpe?: number | null;
   is_warmup?: boolean;
+  set_type?: SetCreateSetType;
   completed_at?: string | null;
 }
+
+export type SetUpdateSetType = typeof SetUpdateSetType[keyof typeof SetUpdateSetType] | null;
+
+
+export const SetUpdateSetType = {
+  normal: 'normal',
+  drop: 'drop',
+  backoff: 'backoff',
+} as const;
 
 export interface SetUpdate {
   reps?: number | null;
@@ -750,6 +803,7 @@ export interface SetUpdate {
   rest_sec?: number | null;
   rpe?: number | null;
   is_warmup?: boolean | null;
+  set_type?: SetUpdateSetType;
   completed_at?: string | null;
 }
 

@@ -14,7 +14,8 @@ def suggest(last_sets: list[dict], reps_min: int, reps_max: int, load_type: str)
       Obergrenze).
     - ``hold``: gleiches Gewicht und gleiche Wiederholungen, weil es schon sehr hart war.
     """
-    work = [s for s in last_sets if not s["is_warmup"]]
+    # Drop- und Backoff-Sätze sagen nichts über die Arbeitslast
+    work = [s for s in last_sets if not s["is_warmup"] and s.get("set_type", "normal") == "normal"]
     if load_type == "time" or not work:
         return None
     weights = [s["weight_kg"] for s in work]

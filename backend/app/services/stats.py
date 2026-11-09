@@ -1,6 +1,7 @@
 """Reine Berechnungen für die Progression (keine DB-Zugriffe).
 
-Aufwärmsätze zählen nie mit. Gewichte in kg.
+Aufwärmsätze zählen nie mit. Drop- und Backoff-Sätze zählen für Volumen und Satzzahlen, aber nicht
+für e1RM, nRM, Bestwerte und Rekorde. Gewichte in kg.
 """
 
 import math
@@ -28,6 +29,7 @@ class SetData:
     rpe: float | None = None
     set_id: int = 0
     set_number: int = 0
+    set_type: str = "normal"
 
 
 def effective_load(load_type: str, weight_kg: float, body_weight_kg: float | None) -> float | None:
@@ -83,6 +85,11 @@ def _working(sets: list[SetData]) -> list[SetData]:
     return [s for s in sets if not s.is_warmup and s.reps > 0]
 
 
+def _ranked(sets: list[SetData]) -> list[SetData]:
+    """Arbeitssätze, die für Maxima zählen (ohne Drop- und Backoff-Sätze)."""
+    return [s for s in _working(sets) if s.set_type == "normal"]
+
+
 def session_metrics(
     sets: list[SetData], load_type: str, body_weight_kg: float | None
 ) -> dict | None:
@@ -122,7 +129,7 @@ def session_metrics(
         volume += s.reps * load
         if top_load_set is None or (load, s.reps) > (top_load_set[0], top_load_set[1].reps):
             top_load_set = (load, s)
-        est = e1rm(load, s.reps, s.rpe)
+        est = e1rm(load, s.reps, s.rpe) if s.set_type == "normal" else None
         if est is not None and (best_e1 is None or est > best_e1):
             best_e1, best_set, best_load = est, s, load
     if best_set is None and top_load_set is not None:
@@ -151,7 +158,7 @@ def history(sets: list[SetData], load_type: str, body_weight_kg: float | None) -
 def records(sets: list[SetData], load_type: str, body_weight_kg: float | None) -> list[dict]:
     """Höchste Last in einem Arbeitssatz mit mindestens n Wiederholungen (n = 1, 5, 8, 13)."""
     result = []
-    working = _working(sets)
+    working = _ranked(sets)
     for n in RECORD_TARGETS:
         best: tuple[float, SetData] | None = None
         for s in working:
@@ -179,7 +186,7 @@ def new_records(
 ) -> list[int]:
     """Welche n-Rekorde bricht ein neuer Arbeitssatz? Ohne Vorgeschichte gibt es keinen Rekord."""
     load = effective_load(load_type, weight_kg, bw)
-    prev_working = _working(previous)
+    prev_working = _ranked(previous)
     if load is None or not prev_working or reps < 1:
         return []
     broken = []
@@ -270,7 +277,7 @@ def rep_profile(
     Schätzung aus dem besten e1RM. Leer für Zeitübungen oder ohne e1RM."""
     if load_type == "time" or best_e1rm is None:
         return []
-    working = _working(sets)
+    working = _ranked(sets)
     out = []
     for n in range(1, PROFILE_MAX_REPS + 1):
         best: tuple[float, SetData] | None = None
@@ -299,7 +306,7 @@ def pr_events(sets: list[SetData], load_type: str, bw: float | None) -> list[dic
     keine Ereignisse. Aufwärmsätze zählen nie."""
     if load_type == "time":
         return []
-    working = sorted(_working(sets), key=lambda s: (s.date, s.set_number, s.set_id))
+    working = sorted(_ranked(sets), key=lambda s: (s.date, s.set_number, s.set_id))
     if not working:
         return []
     first_session = working[0].session_id
@@ -389,7 +396,7 @@ def lifetime(
     """Lebenszeit-Kennzahlen; rows sind die Session-Kennzahlen (aufsteigend nach Datum)."""
     working = _working(sets)
     heaviest: tuple[float, SetData] | None = None
-    for s in working:
+    for s in _ranked(sets):
         load = effective_load(load_type, s.weight_kg, bw)
         if load is None:
             continue

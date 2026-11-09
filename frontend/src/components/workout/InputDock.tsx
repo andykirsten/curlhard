@@ -1,43 +1,49 @@
+import { useState } from 'react'
 import { RpePicker } from '@/components/RpePicker'
 import { Stepper } from '@/components/Stepper'
+import { Sheet } from '@/components/ui/sheet'
+import { SET_KINDS, type SetKind } from '@/lib/setKind'
 import { formatWeight } from '@/lib/weight'
 
 /**
  * Ein Eingabe-Dock im Daumenbereich: Kilo/Wdh-Stepper für den nächsten Satz,
- * optionale RPE-Auswahl, Aufwärm-Toggle und „Satz abhaken“. Zustand liegt beim Aufrufer, damit die
+ * optionale RPE-Auswahl, Satzart-Auswahl und „Satz abhaken“. Zustand liegt beim Aufrufer, damit die
  * aktive Tabellenzeile die Werte live spiegeln kann.
  */
 export function InputDock({
   weight,
   reps,
-  warmup,
+  kind,
   rpe,
   weightStep,
   loadType = 'weight',
   disabled,
   onWeight,
   onReps,
-  onWarmup,
+  onKind,
   onRpe,
   onSubmit,
   plates,
 }: {
   weight: number
   reps: number
-  warmup: boolean
+  kind: SetKind
   rpe: number | null
   weightStep: number
   loadType?: string
   disabled?: boolean
   onWeight: (v: number) => void
   onReps: (v: number) => void
-  onWarmup: (v: boolean) => void
+  onKind: (v: SetKind) => void
   onRpe: (v: number | null) => void
   onSubmit: () => void
   /** Scheibenrechner-Zeile über den Steppern (nur mit Stangengewicht) */
   plates?: { summary: string; onOpen: () => void }
 }) {
   const isTime = loadType === 'time'
+  const warmup = kind === 'warmup'
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const current = SET_KINDS.find((k) => k.value === kind)!
   return (
     <div className="safe-bottom fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-xl md:max-w-2xl rounded-t-[28px] border-t bg-card px-4 pb-4 pt-3 shadow-[0_-8px_24px_rgba(0,0,0,0.12)]">
       <div className="flex flex-col gap-2.5">
@@ -77,16 +83,15 @@ export function InputDock({
         <div className="flex gap-2.5">
           <button
             type="button"
-            role="switch"
-            aria-checked={warmup}
-            aria-label="Aufwärmsatz"
+            aria-haspopup="dialog"
+            aria-label={`Satzart: ${current.label}. Ändern`}
             className={`flex h-16 w-[92px] shrink-0 flex-col items-center justify-center rounded-2xl border-2 ${
-              warmup ? 'border-foreground bg-foreground text-background' : 'border-border'
+              kind === 'normal' ? 'border-border' : 'border-foreground bg-foreground text-background'
             }`}
-            onClick={() => onWarmup(!warmup)}
+            onClick={() => setPickerOpen(true)}
           >
-            <span className="font-display text-2xl leading-none">W</span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.1em]">Aufwärm.</span>
+            <span className="font-display text-2xl leading-none">{current.short}</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.1em]">{current.name}</span>
           </button>
           <button
             type="button"
@@ -98,6 +103,31 @@ export function InputDock({
           </button>
         </div>
       </div>
+      <Sheet open={pickerOpen} onOpenChange={setPickerOpen} title="Satzart">
+        <ul className="space-y-2 pb-2">
+          {SET_KINDS.map((k) => (
+            <li key={k.value}>
+              <button
+                type="button"
+                aria-pressed={k.value === kind}
+                className={`flex min-h-[56px] w-full items-center gap-3 rounded-xl border-2 px-3 text-left ${
+                  k.value === kind ? 'border-primary' : 'border-border'
+                }`}
+                onClick={() => {
+                  onKind(k.value)
+                  setPickerOpen(false)
+                }}
+              >
+                <span className="font-display text-2xl">{k.short}</span>
+                <span>
+                  <span className="block font-semibold">{k.label}</span>
+                  <span className="block text-sm text-muted-foreground">{k.hint}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Sheet>
     </div>
   )
 }

@@ -84,6 +84,7 @@ class LastSet(BaseModel):
     reps: int
     weight_kg: float
     is_warmup: bool
+    set_type: Literal["normal", "drop", "backoff"] = "normal"
     rpe: float | None
 
 
@@ -206,6 +207,7 @@ class LogSet(BaseModel):
     weight_kg: float
     rpe: float | None
     is_warmup: bool
+    set_type: Literal["normal", "drop", "backoff"] = "normal"
     records: list[PrMark]
 
 

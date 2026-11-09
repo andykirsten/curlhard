@@ -10,7 +10,13 @@ const last = (reps: number, weight_kg: number): LastSet => ({
   rpe: null,
 })
 
-const done = (id: number, reps: number, weight_kg: number, is_warmup = false): SetRead => ({
+const done = (
+  id: number,
+  reps: number,
+  weight_kg: number,
+  is_warmup = false,
+  set_type: SetRead['set_type'] = 'normal',
+): SetRead => ({
   id,
   session_exercise_id: 1,
   exercise_id: 1,
@@ -20,6 +26,7 @@ const done = (id: number, reps: number, weight_kg: number, is_warmup = false): S
   rest_sec: null,
   rpe: null,
   is_warmup,
+  set_type,
   completed_at: '2026-10-12T08:00:00Z',
   records: [],
 })
@@ -62,6 +69,18 @@ describe('SetTable', () => {
   it('keeps the next working set as ghost while logging a warmup', () => {
     renderTable([], { number: 1, reps: 10, weight_kg: 20, is_warmup: true, prev: undefined })
     expect(screen.getAllByTestId('ghost-row')).toHaveLength(4)
+  })
+
+  it('zeigt Drop- und Backoff-Sätze mit Kürzel, ohne Arbeitssatz-Nummer und Vergleich', () => {
+    renderTable(
+      [done(1, 8, 60), done(2, 10, 40, false, 'drop'), done(3, 6, 50, false, 'backoff')],
+      null,
+    )
+    const rows = screen.getAllByTestId('set-row')
+    expect(rows[0]).toHaveTextContent('1')
+    expect(screen.getByLabelText('Satz Drop bearbeiten')).toHaveTextContent('D')
+    expect(screen.getByLabelText('Satz Backoff bearbeiten')).toHaveTextContent('B')
+    expect(screen.getByLabelText('Satz Drop bearbeiten')).not.toHaveTextContent('▲')
   })
 
   it('shows no ghost rows for finished sessions', () => {

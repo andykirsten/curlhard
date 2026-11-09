@@ -4,6 +4,7 @@ import type { LogSession } from '@/api'
 import { Spinner } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import { formatDate } from '@/lib/dates'
+import { kindMark } from '@/lib/setKind'
 import { formatSeconds, groupByMonth, kg, prLabel, signedPct } from '@/lib/exerciseStats'
 import { formatWeight } from '@/lib/weight'
 import { useExerciseLogPages } from './useExerciseLogPages'
@@ -46,10 +47,12 @@ export function SessionCard({ item, loadType }: { item: LogSession; loadType: st
             <li
               key={s.set_number}
               className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-semibold tabular-nums ${
-                s.is_warmup ? 'bg-secondary/60 text-muted-foreground' : 'bg-secondary'
+                kindMark(s) ? 'bg-secondary/60 text-muted-foreground' : 'bg-secondary'
               } ${s.records.length > 0 ? 'ring-1 ring-gold' : ''}`}
             >
-              {s.is_warmup && <span className="text-[11px] font-bold uppercase">W</span>}
+              {kindMark(s) && (
+                <span className="text-[11px] font-bold uppercase">{kindMark(s)}</span>
+              )}
               {setLabel(s.reps, s.weight_kg, loadType)}
               {s.rpe != null && (
                 <span className="text-xs font-medium text-muted-foreground">

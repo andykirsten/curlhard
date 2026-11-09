@@ -34,6 +34,7 @@ describe('SetEntry keyboard input', () => {
       reps: 12,
       weight_kg: 72.5,
       is_warmup: false,
+      set_type: 'normal',
       rpe: null,
     })
   })
@@ -52,6 +53,7 @@ describe('SetEntry', () => {
       reps: 7,
       weight_kg: 62.5,
       is_warmup: false,
+      set_type: 'normal',
       rpe: null,
     })
   })
@@ -59,12 +61,28 @@ describe('SetEntry', () => {
   it('can mark a warmup set', async () => {
     const onSubmit = vi.fn()
     render(<SetEntry initialReps={10} initialWeight={20} weightStep={1.25} onSubmit={onSubmit} />)
-    await userEvent.click(screen.getByLabelText('Aufwärmsatz'))
+    await userEvent.click(screen.getByRole('radio', { name: 'Aufwärmen' }))
     await userEvent.click(screen.getByRole('button', { name: /Satz abhaken/ }))
     expect(onSubmit).toHaveBeenCalledWith({
       reps: 10,
       weight_kg: 20,
       is_warmup: true,
+      set_type: 'normal',
+      rpe: null,
+    })
+  })
+
+  it('can mark a drop set, which keeps the RPE picker', async () => {
+    const onSubmit = vi.fn()
+    render(<SetEntry initialReps={10} initialWeight={40} weightStep={2.5} onSubmit={onSubmit} />)
+    await userEvent.click(screen.getByRole('radio', { name: 'Drop' }))
+    expect(screen.getByRole('radio', { name: /RPE 8/ })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /Satz abhaken/ }))
+    expect(onSubmit).toHaveBeenCalledWith({
+      reps: 10,
+      weight_kg: 40,
+      is_warmup: false,
+      set_type: 'drop',
       rpe: null,
     })
   })
@@ -75,13 +93,20 @@ describe('SetEntry', () => {
     await userEvent.click(screen.getByRole('radio', { name: /RPE 8/ }))
     expect(screen.getByRole('radio', { name: /RPE 8/ })).toHaveAttribute('aria-checked', 'true')
     await userEvent.click(screen.getByRole('button', { name: /Satz abhaken/ }))
-    expect(onSubmit).toHaveBeenLastCalledWith({ reps: 5, weight_kg: 100, is_warmup: false, rpe: 8 })
+    expect(onSubmit).toHaveBeenLastCalledWith({
+      reps: 5,
+      weight_kg: 100,
+      is_warmup: false,
+      set_type: 'normal',
+      rpe: 8,
+    })
     await userEvent.click(screen.getByRole('radio', { name: /RPE 8/ }))
     await userEvent.click(screen.getByRole('button', { name: /Satz abhaken/ }))
     expect(onSubmit).toHaveBeenLastCalledWith({
       reps: 5,
       weight_kg: 100,
       is_warmup: false,
+      set_type: 'normal',
       rpe: null,
     })
   })

@@ -4602,6 +4602,16 @@
             "type": "boolean",
             "title": "Is Warmup"
           },
+          "set_type": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "drop",
+              "backoff"
+            ],
+            "title": "Set Type",
+            "default": "normal"
+          },
           "rpe": {
             "anyOf": [
               {
@@ -4882,6 +4892,16 @@
           "is_warmup": {
             "type": "boolean",
             "title": "Is Warmup"
+          },
+          "set_type": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "drop",
+              "backoff"
+            ],
+            "title": "Set Type",
+            "default": "normal"
           },
           "records": {
             "items": {
@@ -5234,6 +5254,18 @@
             "type": "string",
             "title": "Note",
             "default": ""
+          },
+          "group_no": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group No"
           }
         },
         "type": "object",
@@ -5279,6 +5311,17 @@
           "note": {
             "type": "string",
             "title": "Note"
+          },
+          "group_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group No"
           }
         },
         "type": "object",
@@ -5370,6 +5413,18 @@
               }
             ],
             "title": "Note"
+          },
+          "group_no": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group No"
           }
         },
         "type": "object",
@@ -6002,6 +6057,17 @@
             "type": "string",
             "title": "Note"
           },
+          "group_no": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group No"
+          },
           "sets": {
             "items": {
               "$ref": "#/components/schemas/SetRead"
@@ -6018,6 +6084,7 @@
           "exercise_id",
           "position",
           "note",
+          "group_no",
           "sets"
         ],
         "title": "SessionExerciseRead"
@@ -6460,6 +6527,16 @@
             "title": "Is Warmup",
             "default": false
           },
+          "set_type": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "drop",
+              "backoff"
+            ],
+            "title": "Set Type",
+            "default": "normal"
+          },
           "completed_at": {
             "anyOf": [
               {
@@ -6531,6 +6608,15 @@
             "type": "boolean",
             "title": "Is Warmup"
           },
+          "set_type": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "drop",
+              "backoff"
+            ],
+            "title": "Set Type"
+          },
           "completed_at": {
             "type": "string",
             "format": "date-time",
@@ -6556,6 +6642,7 @@
           "rest_sec",
           "rpe",
           "is_warmup",
+          "set_type",
           "completed_at",
           "records"
         ],
@@ -6637,6 +6724,22 @@
               }
             ],
             "title": "Is Warmup"
+          },
+          "set_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "drop",
+                  "backoff"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Set Type"
           },
           "completed_at": {
             "anyOf": [
