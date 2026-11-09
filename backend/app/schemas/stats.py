@@ -76,6 +76,14 @@ class LastSet(BaseModel):
     rpe: float | None
 
 
+class Suggestion(BaseModel):
+    """Progressions-Vorschlag; bei ``increase`` fehlt die Schrittweite (liegt im Frontend)."""
+
+    kind: Literal["increase", "reps", "hold"]
+    weight_kg: float
+    reps: int
+
+
 class TodayExercise(BaseModel):
     plan_exercise_id: int
     exercise_id: int
@@ -88,6 +96,7 @@ class TodayExercise(BaseModel):
     note: str
     permanent_note: str
     last_sets: list[LastSet]
+    suggestion: Suggestion | None = None
 
 
 class TodayDay(BaseModel):

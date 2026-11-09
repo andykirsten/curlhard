@@ -5512,6 +5512,16 @@
             ],
             "title": "Target Rest Sec"
           },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Suggestion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "source_session_id": {
             "anyOf": [
               {
@@ -5554,6 +5564,7 @@
           "exercise_id",
           "target_sets",
           "target_rest_sec",
+          "suggestion",
           "source_session_id",
           "source_started_at",
           "same_plan_day",
@@ -6574,6 +6585,35 @@
         "type": "object",
         "title": "SetUpdate"
       },
+      "Suggestion": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "increase",
+              "reps",
+              "hold"
+            ],
+            "title": "Kind"
+          },
+          "weight_kg": {
+            "type": "number",
+            "title": "Weight Kg"
+          },
+          "reps": {
+            "type": "integer",
+            "title": "Reps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "weight_kg",
+          "reps"
+        ],
+        "title": "Suggestion",
+        "description": "Progressions-Vorschlag; bei ``increase`` fehlt die Schrittweite (liegt im Frontend)."
+      },
       "SummaryRead": {
         "properties": {
           "exercise_id": {
@@ -6734,6 +6774,16 @@
             },
             "type": "array",
             "title": "Last Sets"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Suggestion"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

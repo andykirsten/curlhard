@@ -546,6 +546,24 @@ export interface PlanUpdate {
   is_public?: boolean | null;
 }
 
+export type SuggestionKind = typeof SuggestionKind[keyof typeof SuggestionKind];
+
+
+export const SuggestionKind = {
+  increase: 'increase',
+  reps: 'reps',
+  hold: 'hold',
+} as const;
+
+/**
+ * Progressions-Vorschlag; bei ``increase`` fehlt die Schrittweite (liegt im Frontend).
+ */
+export interface Suggestion {
+  kind: SuggestionKind;
+  weight_kg: number;
+  reps: number;
+}
+
 /**
  * Vergleichswerte einer Übung der Session aus dem vorherigen Training.
  */
@@ -553,6 +571,7 @@ export interface PreviousExercise {
   exercise_id: number;
   target_sets: number | null;
   target_rest_sec: number | null;
+  suggestion: Suggestion | null;
   source_session_id: number | null;
   source_started_at: string | null;
   same_plan_day: boolean;
@@ -740,6 +759,7 @@ export interface TodayExercise {
   note: string;
   permanent_note: string;
   last_sets: LastSet[];
+  suggestion?: Suggestion | null;
 }
 
 export interface TodayDay {

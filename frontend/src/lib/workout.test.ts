@@ -6,6 +6,7 @@ import {
   exerciseProgress,
   exerciseVolume,
   formatElapsed,
+  proposalFor,
   volumePercent,
 } from './workout'
 
@@ -98,5 +99,29 @@ describe('formatElapsed', () => {
   it('formats hh:mm:ss', () => {
     expect(formatElapsed(3_723_000)).toBe('01:02:03')
     expect(formatElapsed(-5)).toBe('00:00:00')
+  })
+})
+
+describe('proposalFor', () => {
+  it('erhöht bei „increase“ um die Schrittweite und setzt die Untergrenze', () => {
+    const p = proposalFor({ kind: 'increase', weight_kg: 80, reps: 8 }, 'weight', 2.5)
+    expect(p).toMatchObject({ weight: 82.5, reps: 8 })
+    expect(p.reason).toContain('+2,5 kg')
+  })
+
+  it('verringert bei assisted die Unterstützung und geht nicht unter 0', () => {
+    const p = proposalFor({ kind: 'increase', weight_kg: 1.25, reps: 8 }, 'assisted', 2.5)
+    expect(p.weight).toBe(0)
+    expect(p.reason).toContain('−2,5 kg')
+  })
+
+  it('behält das Gewicht bei „reps“ und „hold“', () => {
+    expect(proposalFor({ kind: 'reps', weight_kg: 80, reps: 9 }, 'weight', 2.5)).toMatchObject({
+      weight: 80,
+      reps: 9,
+    })
+    const hold = proposalFor({ kind: 'hold', weight_kg: 80, reps: 12 }, 'weight', 2.5)
+    expect(hold.weight).toBe(80)
+    expect(hold.reason).toContain('halten')
   })
 })

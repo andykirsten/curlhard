@@ -1,5 +1,6 @@
+import type { Suggestion } from '@/api'
 import { formatDate } from '@/lib/dates'
-import { formatWeight } from '@/lib/weight'
+import { formatWeight, stepWeight } from '@/lib/weight'
 
 const mayhew = (reps: number) => 1 / (0.522 + 0.419 * Math.exp(-0.055 * reps))
 
@@ -56,6 +57,32 @@ export function compareLabel(
   if (!prev?.source_started_at) return 'Noch kein Vergleich'
   const source = prev.same_plan_day ? (planDayName ?? 'gleicher Tag') : 'anderes Training'
   return `Letztes Mal: ${source} · ${formatDate(prev.source_started_at, 'EEEEEE, dd.MM.')}`
+}
+
+export interface Proposal {
+  weight: number
+  reps: number
+  reason: string
+}
+
+/**
+ * Vorbelegung aus dem Progressions-Vorschlag des Backends. Bei „increase“ addiert hier die
+ * eingestellte Schrittweite (bei assisted heißt „mehr“ weniger Unterstützung).
+ */
+export function proposalFor(s: Suggestion, loadType: string, weightStep: number): Proposal {
+  if (s.kind === 'increase') {
+    const dir = loadType === 'assisted' ? -1 : 1
+    return {
+      weight: stepWeight(s.weight_kg, dir, weightStep),
+      reps: s.reps,
+      reason: `Letztes Mal alles geschafft → ${dir === 1 ? '+' : '−'}${formatWeight(weightStep)} kg`,
+    }
+  }
+  const reason =
+    s.kind === 'hold'
+      ? 'Letztes Mal sehr hart (RPE ≥ 9,5) → Gewicht halten'
+      : 'Eine Wiederholung mehr als letztes Mal'
+  return { weight: s.weight_kg, reps: s.reps, reason }
 }
 
 /** Anteil am letzten Mal in Prozent (gerundet, nicht gedeckelt); null ohne Vergleichswert. */

@@ -49,6 +49,21 @@ def test_today_picks_weekday_and_includes_last_values(alice, catalog):
     assert alice.get(f"{API}/today", params={"weekday": 6}).json()["day"] is None
 
 
+def test_today_and_previous_carry_progression_suggestion(alice, catalog):
+    plan, day = _active_plan(alice, catalog, weekday=2)
+    s = alice.post(f"{API}/sessions", json={"plan_day_id": day["id"], "started_at": iso(3)}).json()
+    se = s["exercises"][0]
+    for _ in range(3):  # Standardbereich 8–12: Untergrenze erreicht → eine Wdh. mehr
+        alice.post(f"{API}/session-exercises/{se['id']}/sets", json={"reps": 8, "weight_kg": 80})
+    expected = {"kind": "reps", "weight_kg": 80, "reps": 9}
+    body = alice.get(f"{API}/today", params={"weekday": 2}).json()
+    assert body["day"]["exercises"][0]["suggestion"] == expected
+    assert body["day"]["exercises"][1]["suggestion"] is None  # Kniebeuge ohne Historie
+    new = alice.post(f"{API}/sessions", json={"plan_day_id": day["id"]}).json()
+    prev = alice.get(f"{API}/sessions/{new['id']}/previous").json()
+    assert prev["exercises"][0]["suggestion"] == expected
+
+
 def test_today_day_on_several_weekdays_shares_last_values(alice, catalog):
     plan, day = _active_plan(alice, catalog)
     alice.patch(f"{API}/plan-days/{day['id']}", json={"weekdays": [0, 2, 4]})
