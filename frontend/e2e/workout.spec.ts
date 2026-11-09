@@ -219,3 +219,30 @@ test('Statistik-Tab: Balance, Rekorde und Körpergewicht eintragen', async ({ pa
   await page.getByRole('button', { name: 'Speichern' }).click()
   await expect(page.getByTestId('body-weight-current')).toHaveText(/\d+(,\d+)? kg/)
 })
+
+test('Hevy-Import: Vorschau, bestätigen, Training erscheint im Verlauf', async ({ page, request }, testInfo) => {
+  const email = `hevy-${testInfo.project.name}@example.com`
+  await createUser(request, email, 'hevy-secret-password')
+  await login(page, email, 'hevy-secret-password')
+  await expect(page.getByRole('heading', { name: /Heute/ })).toBeVisible()
+  const header =
+    'title,start_time,end_time,description,exercise_title,superset_id,exercise_notes,set_index,set_type,weight_kg,reps,distance_km,duration_seconds,rpe'
+  const rows = [
+    '"Push","7 Jan 2026, 09:30","7 Jan 2026, 10:30","","Testkurzhantelpresse",,,0,warmup,10,10,,,',
+    '"Push","7 Jan 2026, 09:30","7 Jan 2026, 10:30","","Testkurzhantelpresse",,,1,normal,20,8,,,8',
+    '"Push","7 Jan 2026, 09:30","7 Jan 2026, 10:30","","Testkurzhantelpresse",,,2,dropset,15,10,,,',
+  ]
+  await page.goto('/settings')
+  await page.getByLabel('Hevy-Export auswählen').setInputFiles({
+    name: 'hevy.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from([header, ...rows].join('\n')),
+  })
+  const preview = page.getByTestId('import-preview')
+  await expect(preview).toContainText('1 Training, 3 Sätze')
+  await expect(preview).toContainText('1 neue Übung wird angelegt')
+  await page.getByRole('button', { name: 'Importieren' }).click()
+  await expect(page.getByText('1 Training importiert')).toBeVisible()
+  await page.goto('/history')
+  await expect(page.getByRole('link', { name: /7\. Jan\. 2026.*3 Sätze/ })).toBeVisible()
+})

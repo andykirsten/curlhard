@@ -97,6 +97,10 @@ export interface BodyWeightRead {
   weight_kg: number;
 }
 
+export interface BodyImportHevy {
+  file: Blob | File;
+}
+
 export interface BodyUploadAvatar {
   file: Blob | File;
 }
@@ -282,6 +286,16 @@ export interface HistoryRead {
   exercise_id: number;
   metric: string;
   points: HistoryPoint[];
+}
+
+export interface ImportResult {
+  dry_run: boolean;
+  sessions: number;
+  sets: number;
+  exercises_created: number;
+  exercises_reused: number;
+  sessions_skipped: number;
+  rows_skipped: number;
 }
 
 export interface RepProfilePoint {
@@ -1013,6 +1027,10 @@ weeks?: number;
 export type ListBodyWeightParams = {
 from?: string | null;
 to?: string | null;
+};
+
+export type ImportHevyParams = {
+dry_run?: boolean;
 };
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -8553,6 +8571,91 @@ export function useExportData<TData = Awaited<ReturnType<typeof exportData>>, TE
 
 
 
+
+export const getImportHevyUrl = (params?: ImportHevyParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/account/import/hevy?${stringifiedParams}` : `/api/v1/account/import/hevy`
+}
+
+/**
+ * Importiert einen Hevy-CSV-Export; mit `dry_run` wird nur gezählt, nichts gespeichert.
+ * @summary Import Hevy
+ */
+export const importHevy = async (bodyImportHevy: BodyImportHevy,
+    params?: ImportHevyParams, options?: Parameters<typeof customFetch>[1]): Promise<ImportResult> => {
+    const formData = new FormData();
+formData.append(`file`, bodyImportHevy.file);
+
+  return customFetch<ImportResult>(getImportHevyUrl(params),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+);}
+
+
+
+
+
+export const getImportHevyMutationKey = () => ['importHevy'] as const;
+
+export const getImportHevyMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importHevy>>, TError,ImportHevyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importHevy>>, TError,ImportHevyMutationVariables, TContext> => {
+
+const mutationKey = getImportHevyMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importHevy>>, ImportHevyMutationVariables> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  importHevy(data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportHevyMutationResult = NonNullable<Awaited<ReturnType<typeof importHevy>>>
+    export type ImportHevyMutationBody = BodyType<BodyImportHevy>
+    export type ImportHevyMutationError = ErrorType<HTTPValidationError>
+    export type ImportHevyMutationVariables = {data: BodyType<BodyImportHevy>;params?: ImportHevyParams}
+
+    /**
+ * @summary Import Hevy
+ */
+export const useImportHevy = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importHevy>>, TError,ImportHevyMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof importHevy>>,
+        TError,
+        ImportHevyMutationVariables,
+        TContext
+      > => {
+      return useMutation(getImportHevyMutationOptions(options), queryClient);
+    }
 
 export const getDeleteAccountUrl = () => {
 

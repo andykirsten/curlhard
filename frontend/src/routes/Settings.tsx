@@ -12,6 +12,7 @@ import {
   useUpdateMe,
   useUploadAvatar,
 } from '@/api'
+import { HevyImport } from '@/components/HevyImport'
 import { PageHeader } from '@/components/Layout'
 import { KlimentPreviewButton } from '@/components/workout/KlimentOverlay'
 import { Avatar } from '@/components/ui/avatar'
@@ -332,6 +333,7 @@ export function SettingsPage() {
           <Button variant="outline" onClick={() => void exportData()}>
             Daten exportieren (JSON)
           </Button>
+          <HevyImport />
           <Link to="/privacy" className="block text-sm text-primary underline">
             Datenschutzerklärung
           </Link>

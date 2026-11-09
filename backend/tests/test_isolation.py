@@ -157,6 +157,7 @@ def test_all_user_endpoints_require_login(app, world):
     anon = TestClient(app, base_url="http://testserver")
     extra = [
         ("get", "/today", None),
+        ("post", "/account/import/hevy", None),
         ("get", "/stats/deload", None),
         ("get", "/stats/balance", None),
         ("get", "/stats/prs", None),

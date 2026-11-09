@@ -3668,6 +3668,60 @@
         }
       }
     },
+    "/api/v1/account/import/hevy": {
+      "post": {
+        "tags": [
+          "account"
+        ],
+        "summary": "Import Hevy",
+        "description": "Importiert einen Hevy-CSV-Export; mit `dry_run` wird nur gezählt, nichts gespeichert.",
+        "operationId": "import_hevy",
+        "parameters": [
+          {
+            "name": "dry_run",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Dry Run"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_hevy"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/account/delete": {
       "post": {
         "tags": [
@@ -3937,6 +3991,20 @@
           "weight_kg"
         ],
         "title": "BodyWeightRead"
+      },
+      "Body_import_hevy": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_import_hevy"
       },
       "Body_upload_avatar": {
         "properties": {
@@ -4755,6 +4823,49 @@
           "points"
         ],
         "title": "HistoryRead"
+      },
+      "ImportResult": {
+        "properties": {
+          "dry_run": {
+            "type": "boolean",
+            "title": "Dry Run"
+          },
+          "sessions": {
+            "type": "integer",
+            "title": "Sessions"
+          },
+          "sets": {
+            "type": "integer",
+            "title": "Sets"
+          },
+          "exercises_created": {
+            "type": "integer",
+            "title": "Exercises Created"
+          },
+          "exercises_reused": {
+            "type": "integer",
+            "title": "Exercises Reused"
+          },
+          "sessions_skipped": {
+            "type": "integer",
+            "title": "Sessions Skipped"
+          },
+          "rows_skipped": {
+            "type": "integer",
+            "title": "Rows Skipped"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dry_run",
+          "sessions",
+          "sets",
+          "exercises_created",
+          "exercises_reused",
+          "sessions_skipped",
+          "rows_skipped"
+        ],
+        "title": "ImportResult"
       },
       "InsightsRead": {
         "properties": {
